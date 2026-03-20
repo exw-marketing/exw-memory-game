@@ -1,34 +1,40 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Trophy, Crown, Play, Timer, User, Delete, Maximize, Minimize,
-  Network, Cable, Cpu, Server, Wifi, Plug, Monitor, HardDrive, Database, Router 
+  Trophy, Crown, Play, Timer, User, Maximize, Minimize
 } from 'lucide-react';
 
 // --- Configuration & Mock Data ---
-const GAME_TIME = 60; // 60 seconds (1 minute)
+const GAME_TIME = 30; 
 const POINTS_PER_MATCH = 10;
 
-// Placeholder icons for your products (Replace with image URLs later if needed)
-const PRODUCT_ICONS = [Network, Cable, Cpu, Server, Wifi, Plug, Monitor, HardDrive, Database, Router];
+const PRODUCT_IMAGES = [
+  './card-image/3 sec lc patch cord.png',
+  './card-image/3Y plug.png',
+  './card-image/5 angle toolless plug.png',
+  './card-image/cable clamp toolless ksj.png',
+  './card-image/fiber front sliding panel.png',
+  './card-image/lgx panel.png',
+  './card-image/bendable patch cord.png',
+  './card-image/multi entry toolless ksj.png',
+  './card-image/angled empty panel.png',
+  './card-image/c6 patch panel.png'
+];
 
-// Pre-populated with your test scores to see the Top 3 styling
 const initialLeaderboard = [
   { id: 'test-1', name: 'Y4', score: 100, timestamp: Date.now() - 400000 },
   { id: 'test-2', name: 'Y2', score: 60, timestamp: Date.now() - 300000 },
   { id: 'test-3', name: 'Y3', score: 50, timestamp: Date.now() - 200000 },
   { id: 'test-4', name: 'Yen', score: 20, timestamp: Date.now() - 100000 },
+  { id: 'test-5', name: 'Guest', score: 10, timestamp: Date.now() - 50000 },
 ];
 
 export default function App() {
-  // --- State Management ---
-  // Views: 'cover', 'playing', 'score_reveal', 'leaderboard'
   const [currentView, setCurrentView] = useState('cover');
   const [playerName, setPlayerName] = useState('');
-  const [showKeyboard, setShowKeyboard] = useState(false);
   const [leaderboard, setLeaderboard] = useState(initialLeaderboard);
-  const inputRef = useRef(null);
-  const formContainerRef = useRef(null);
   
+  const [bgFailed, setBgFailed] = useState(false);
+
   // Game State
   const [cards, setCards] = useState([]);
   const [flippedIndices, setFlippedIndices] = useState([]);
@@ -36,17 +42,13 @@ export default function App() {
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(GAME_TIME);
   const [isProcessing, setIsProcessing] = useState(false);
-  
-  // End Game State
   const [currentPlayerResult, setCurrentPlayerResult] = useState(null);
 
-  // --- Fullscreen Logic ---
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
+    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
@@ -60,142 +62,58 @@ export default function App() {
   };
 
   const toggleFullScreen = (e) => {
-    e.stopPropagation(); // Prevents the outer click listener from firing immediately
+    e.stopPropagation();
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => console.log(err));
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      }
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen();
     }
   };
 
-  // --- Auto-Scaling Display Logic ---
-  const [scale, setScale] = useState(1);
-
   useEffect(() => {
     const handleResize = () => {
-      // Calculate the scale needed to fit 1920x1080 into the current window
       const scaleX = window.innerWidth / 1920;
       const scaleY = window.innerHeight / 1080;
-      // Use the smaller scale to ensure the whole 16:9 canvas is always visible
       setScale(Math.min(scaleX, scaleY));
     };
-
-    handleResize(); // Trigger on initial load
+    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // --- Title Case Formatter ---
-  const formatTitleCase = (str) => {
-    return str.split(' ').map(word => {
-      if (!word) return '';
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    }).join(' ');
-  };
+  const handleNameChange = (e) => {
+    const input = e.target;
+    const start = input.selectionStart;
+    const val = input.value;
 
-  // --- Input Handler (Supports Cursor & Selection) ---
-  const handleInputText = (charOrAction) => {
-    const input = inputRef.current;
-    if (!input) return;
-
-    // Grab the exact start and end positions of the user's text selection
-    const start = input.selectionStart || 0;
-    const end = input.selectionEnd || 0;
-
-    setPlayerName(prev => {
-      let newVal = prev;
-      let newCursorPos = start;
-
-      if (charOrAction === 'DEL' || charOrAction === 'Backspace') {
-        if (start !== end) {
-          // Delete highlighted text all at once
-          newVal = prev.slice(0, start) + prev.slice(end);
-          newCursorPos = start;
-        } else if (start > 0) {
-          // Delete single character behind the cursor
-          newVal = prev.slice(0, start - 1) + prev.slice(end);
-          newCursorPos = start - 1;
-        }
-      } else { 
-        // Insert new character at the exact cursor position (or replace highlighted text)
-        newVal = prev.slice(0, start) + charOrAction + prev.slice(end);
-        newCursorPos = start + 1;
-      }
-
-      if (newVal.length <= 15) {
-        // Update the visible blinking cursor position after React updates the text
-        setTimeout(() => {
-          if (inputRef.current) {
-            inputRef.current.focus();
-            inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
-          }
-        }, 0);
-        return formatTitleCase(newVal);
-      }
+    if (val.length <= 15) {
+      const formatted = val.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : '').join(' ');
+      setPlayerName(formatted);
       
-      return prev;
-    });
+      setTimeout(() => {
+        if (input) input.setSelectionRange(start, start);
+      }, 0);
+    }
   };
 
-  // --- Physical Keyboard Listener ---
-  useEffect(() => {
-    if (currentView !== 'cover') return;
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && playerName.trim()) {
+      initializeGame();
+    }
+  };
 
-    const handleGlobalKeyDown = (e) => {
-      // Ignore special shortcuts like Ctrl+C, Alt+Tab
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-
-      if (e.key === 'Backspace') {
-        handleInputText('Backspace');
-      } else if (e.key.length === 1 && /[a-zA-Z0-9 ]/.test(e.key)) {
-        handleInputText(e.key);
-        // Automatically expand the UI to show the start button if they start typing physically
-        setShowKeyboard(true); 
-      }
-    };
-
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [currentView]);
-
-  // --- Click Outside to Hide Keyboard Listener ---
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      // If the keyboard is showing, AND the user clicked somewhere that is NOT inside the form container
-      if (showKeyboard && formContainerRef.current && !formContainerRef.current.contains(event.target)) {
-        setShowKeyboard(false);
-      }
-    };
-
-    // Listen for both mouse clicks and physical touch events
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
-  }, [showKeyboard]);
-
-  // --- Initialization ---
   const initializeGame = () => {
-    // Create pairs, shuffle them
-    const deck = [...PRODUCT_ICONS, ...PRODUCT_ICONS]
-      .map((Icon, index) => ({ id: index, Icon, isMatched: false }))
+    const deck = [...PRODUCT_IMAGES, ...PRODUCT_IMAGES]
+      .map((imagePath, index) => ({ id: index, imagePath }))
       .sort(() => Math.random() - 0.5);
-    
     setCards(deck);
     setFlippedIndices([]);
     setMatchedIndices([]);
     setScore(0);
     setTimeLeft(GAME_TIME);
     setCurrentView('playing');
-    setCurrentPlayerResult(null);
   };
 
-  // --- Game Logic ---
   useEffect(() => {
     let timer;
     if (currentView === 'playing' && timeLeft > 0) {
@@ -206,34 +124,18 @@ export default function App() {
     return () => clearInterval(timer);
   }, [currentView, timeLeft]);
 
-  // Check for game win (all matched)
-  useEffect(() => {
-    if (currentView === 'playing' && matchedIndices.length === 20) {
-      endGame();
-    }
-  }, [matchedIndices]);
-
   const handleCardClick = (index) => {
-    // Prevent clicking if processing, card already flipped, or already matched
-    if (isProcessing || flippedIndices.includes(index) || matchedIndices.includes(index)) {
-      return;
-    }
-
+    if (isProcessing || flippedIndices.includes(index) || matchedIndices.includes(index)) return;
     const newFlipped = [...flippedIndices, index];
     setFlippedIndices(newFlipped);
-
     if (newFlipped.length === 2) {
       setIsProcessing(true);
-      const [firstIndex, secondIndex] = newFlipped;
-      
-      if (cards[firstIndex].Icon === cards[secondIndex].Icon) {
-        // Match found
-        setMatchedIndices(prev => [...prev, firstIndex, secondIndex]);
+      if (cards[newFlipped[0]].imagePath === cards[newFlipped[1]].imagePath) {
+        setMatchedIndices(prev => [...prev, ...newFlipped]);
         setScore(prev => prev + POINTS_PER_MATCH);
         setFlippedIndices([]);
         setIsProcessing(false);
       } else {
-        // No match, flip back after delay
         setTimeout(() => {
           setFlippedIndices([]);
           setIsProcessing(false);
@@ -244,194 +146,185 @@ export default function App() {
 
   const endGame = () => {
     setCurrentView('score_reveal');
-    
-    const newResult = {
-      id: Date.now().toString(),
-      name: playerName || 'Guest',
-      score: score,
-      timestamp: Date.now()
-    };
+    const newResult = { id: Date.now().toString(), name: playerName || 'Guest', score, timestamp: Date.now() };
     setCurrentPlayerResult(newResult);
-
-    // Update Leaderboard: Add new, sort by score (desc), then by timestamp (desc - newer is better in ties)
-    const newLeaderboard = [...leaderboard, newResult].sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      return b.timestamp - a.timestamp; // Tie breaker: newer timestamp wins
-    });
-    
-    setLeaderboard(newLeaderboard);
-
-    // Transition to leaderboard after 3 seconds
-    setTimeout(() => {
-      setCurrentView('leaderboard');
-    }, 3000);
+    setLeaderboard(prev => [...prev, newResult].sort((a, b) => b.score !== a.score ? b.score - a.score : b.timestamp - a.timestamp));
+    setTimeout(() => setCurrentView('leaderboard'), 2000);
   };
 
   const resetToCover = () => {
     setPlayerName('');
-    setShowKeyboard(false);
     setCurrentView('cover');
   };
 
-  // --- Keyboard Logic ---
-  const handleKeyPress = (key) => {
-    if (key === 'DEL') {
-      handleInputText('DEL');
+  const renderPlayerRow = (player, index, isCurrentPlayer, isRankedTop5, isCoverView = false) => {
+    let rowBgClass = '';
+    
+    // Determine if this specific row is the current player in 4th/5th place on the ending screen
+    const isHighContrastRow = isCurrentPlayer && isRankedTop5 && index >= 3 && !isCoverView;
+    const isCurrentPlayerTop3 = isCurrentPlayer && index < 3 && !isCoverView;
+    
+    if (isCoverView) {
+      rowBgClass = index < 3
+        ? 'bg-[#F59E0B]/85 backdrop-blur-xl border border-amber-300/80 shadow-[0_8px_25px_rgba(245,158,11,0.4)] rounded-[1.5rem]'
+        : 'bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.1)] rounded-[1.5rem]';
     } else {
-      const char = key === 'SPACE' ? ' ' : key;
-      handleInputText(char);
+      if (isCurrentPlayer) {
+        if (index < 3) {
+          // Top 3 + Current Player: Gold-ish glassy background with strong glowing gold border
+          rowBgClass = 'bg-yellow-500/50 backdrop-blur-xl border-2 border-yellow-300 shadow-[0_0_35px_rgba(250,204,21,0.9),inset_0_0_20px_rgba(255,255,255,0.5)] transform scale-110 z-30 rounded-3xl';
+        } else if (isRankedTop5) {
+          // Rank 4-5 + Current Player: Clear glassy white background with a bright white glowing border
+          rowBgClass = 'bg-white/20 backdrop-blur-xl border-2 border-white shadow-[0_0_30px_rgba(255,255,255,0.8),inset_0_0_20px_rgba(255,255,255,0.5)] transform scale-[1.05] z-30 rounded-3xl';
+        } else {
+          // Not in Top 5 + Current Player: Emerald glass and emerald glow
+          rowBgClass = 'bg-emerald-500/50 backdrop-blur-xl border-2 border-emerald-300 shadow-[0_0_30px_rgba(52,211,153,0.8),inset_0_0_20px_rgba(255,255,255,0.3)] transform scale-[1.02] z-30 rounded-3xl';
+        }
+      } else {
+        if (index < 3) {
+          rowBgClass = 'bg-[#F59E0B]/90 backdrop-blur-xl border border-[#F59E0B] shadow-[inset_0_0_20px_rgba(255,255,255,0.2),0_10px_30px_rgba(245,158,11,0.3)] transform scale-105 z-10 rounded-3xl';
+        } else {
+          rowBgClass = 'bg-black/20 backdrop-blur-md border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.1)] rounded-3xl';
+        }
+      }
     }
+
+    return (
+      <div 
+        key={player.id} 
+        className={`relative px-8 py-5 flex items-center justify-between transition-all duration-500 ${rowBgClass}`}
+      >
+        <div className="flex items-center gap-6">
+          <div className={`w-16 h-16 rounded-2xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)] flex items-center justify-center ${
+            isCoverView 
+              ? 'bg-black/10 border border-white/20' 
+              : isHighContrastRow 
+                ? 'bg-slate-800/20 border border-white/40' // Darken the rank box slightly to make white text pop
+                : 'bg-black/10 border border-white/10' // Restored dark background for the crown icon universally
+          }`}>
+            {index < 3 ? (
+              <Crown className={`w-8 h-8 ${
+                index === 0 ? 'text-[#FFD700] drop-shadow-[0_0_12px_rgba(255,215,0,0.9)]' : 
+                index === 1 ? 'text-[#E3E4E5] drop-shadow-[0_0_12px_rgba(227,228,229,0.9)]' : 
+                'text-[#8B4513] drop-shadow-[0_0_12px_rgba(139,69,19,0.9)]'
+              }`} fill="currentColor" />
+            ) : (
+              <span className={`text-2xl font-black ${isHighContrastRow ? 'text-white drop-shadow-md' : 'text-white/50'}`}>{index + 1}</span>
+            )}
+          </div>
+          <span className={`text-4xl font-bold tracking-wide ${isHighContrastRow ? 'text-slate-800 drop-shadow-sm' : 'text-white drop-shadow-md'}`}>
+            {player.name}
+          </span>
+        </div>
+        <div className="flex flex-col items-end">
+           <span className={`text-5xl font-black ${isHighContrastRow ? 'text-slate-800 drop-shadow-sm' : 'text-white drop-shadow-lg'}`}>
+             {player.score}
+           </span>
+           <span className={`text-xs font-bold uppercase tracking-widest ${index < 3 ? 'text-white/80' : (isHighContrastRow ? 'text-slate-600' : 'text-white/50')}`}>
+             Points
+           </span>
+        </div>
+      </div>
+    );
   };
 
-  const keyboardRows = [
-    ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
-    ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
-    ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
-    ['Z', 'X', 'C', 'V', 'B', 'N', 'M', 'DEL']
-  ];
-
-  // --- View Renderer ---
   const renderCurrentView = () => {
     if (currentView === 'cover') {
       return (
-        <div className="w-full h-full bg-slate-900 text-white flex flex-col items-center justify-center p-6 font-sans">
-          {/* Branding */}
-          <div className="mb-4 flex flex-col items-center">
-            <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400 mb-2 tracking-tighter shadow-lg">
-              EXW
-            </h1>
-            <h2 className="text-3xl font-bold tracking-wide text-slate-200 uppercase">Memory Challenge</h2>
-            <p className="text-emerald-400 text-lg mt-2">Match the products. Win the prize.</p>
+        <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-white">
+          <div className="absolute inset-0 z-0 bg-gradient-to-br from-white to-[#E0E0E0]">
+            {!bgFailed && (
+              <img src="./bg.png" onError={() => setBgFailed(true)} className="w-full h-full object-cover mix-blend-multiply opacity-100" alt="Background" />
+            )}
           </div>
 
-          {/* Input Form & Keyboard */}
-          <div ref={formContainerRef} className="w-full max-w-3xl bg-slate-800 p-6 rounded-3xl shadow-2xl border border-slate-700 mb-6 flex flex-col items-center">
-            <label className="text-xl mb-3 font-semibold flex items-center text-slate-300">
-              <User className="mr-3 w-6 h-6 text-emerald-400" />
-              Enter Your Name to Play
-            </label>
-            
-            <div className="w-full relative mb-4">
-              <input 
-                ref={inputRef}
-                type="text" 
-                value={playerName}
-                readOnly={true} // Prevents Windows/Android virtual keyboard from opening!
-                onClick={() => setShowKeyboard(true)}
-                placeholder="Tap here to type..."
-                className="w-full text-4xl p-5 rounded-2xl bg-slate-900 border-2 border-emerald-500/50 text-white text-center focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-400/20 transition-all cursor-pointer"
-                maxLength={15}
-              />
-              {/* Fake blinking cursor effect when empty */}
-              {!playerName && showKeyboard && (
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-10 bg-emerald-400 animate-pulse pointer-events-none opacity-50"></span>
-              )}
-            </div>
+          <div className="w-[1780px] h-[960px] relative z-10 flex flex-row items-center justify-center gap-24">
+            <div className="flex-1 max-w-[950px] flex flex-col items-center justify-center h-full">
+              <div className="mb-16 flex flex-col items-center w-full">
+                <h1 
+                  className="text-[7.5rem] uppercase text-center leading-[1.1] drop-shadow-2xl mb-2 whitespace-nowrap" 
+                  style={{ 
+                    fontFamily: "'Bungee Inline', sans-serif", 
+                    fontWeight: 400,
+                    color: '#0099D0',
+                    textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 0px 2px 0 white, 0px -2px 0 white, 2px 0px 0 white, -2px 0px 0 white',
+                    wordSpacing: '10px'   
+                  }}
+                >
+                  REACH TOP 3,
+                </h1>
+                <h1 
+                  className="text-[7.5rem] uppercase text-center leading-[1.1] drop-shadow-2xl mb-6 whitespace-nowrap" 
+                  style={{ 
+                    fontFamily: "'Bungee Inline', sans-serif", 
+                    fontWeight: 400,
+                    color: '#0099D0',
+                    textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 0px 2px 0 white, 0px -2px 0 white, 2px 0px 0 white, -2px 0px 0 white',
+                    wordSpacing: '10px'   
+                  }}
+                >
+                  WIN A PRIZE!
+                </h1>
+                <h2 
+                  className="text-[2.75rem] text-center tracking-[0.15em] uppercase drop-shadow-lg whitespace-nowrap" 
+                  style={{ 
+                    fontFamily: "'Bungee Inline', sans-serif", 
+                    fontWeight: 400,
+                    color: '#007BA8',
+                    textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 0px 2px 0 white, 0px -2px 0 white, 2px 0px 0 white, -2px 0px 0 white',
+                    wordSpacing: '10px'   
+                  }}
+                >
+                  30 Second Memory Challenge
+                </h2>
+              </div>
 
-            {/* Conditional Rendering for Keyboard & Start Button */}
-            {showKeyboard && (
-              <div className="w-full animate-in fade-in slide-in-from-top-4 duration-300">
-                {/* Custom On-Screen Keyboard */}
-                <div className="w-full flex flex-col gap-2 mb-6 bg-slate-900/60 p-4 rounded-2xl border border-slate-700/50">
-                  {keyboardRows.map((row, rowIndex) => (
-                    <div key={rowIndex} className="flex justify-center gap-2 w-full">
-                      {row.map((key) => {
-                        const isDel = key === 'DEL';
-                        return (
-                          <button
-                            key={key}
-                            onMouseDown={(e) => e.preventDefault()} // Keeps focus on input so selection isn't lost
-                            onClick={() => handleKeyPress(key)}
-                            className={`
-                              ${isDel ? 'px-4 bg-red-900/40 hover:bg-red-800/60 text-red-300 border-red-900' : 'flex-1 max-w-[65px] bg-slate-700 hover:bg-slate-600 text-white border-slate-800'}
-                              py-3 active:scale-95 active:bg-emerald-500 active:text-slate-900 transition-all
-                              text-2xl font-bold rounded-xl shadow-lg border-b-4 select-none
-                            `}
-                          >
-                            {isDel ? <Delete className="w-8 h-8 mx-auto" /> : key}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ))}
-                  {/* Spacebar Row */}
-                  <div className="flex justify-center gap-2 w-full">
-                    <button
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => handleKeyPress('SPACE')}
-                      className="w-2/3 py-3 bg-slate-700 hover:bg-slate-600 active:scale-95 active:bg-emerald-500 active:text-slate-900 transition-all text-2xl font-bold text-slate-400 rounded-xl shadow-lg border-b-4 border-slate-800 select-none uppercase tracking-widest"
-                    >
-                      Space
-                    </button>
-                  </div>
+              <div className="w-full max-w-xl bg-slate-800/30 backdrop-blur-2xl border border-white/30 border-t-white/50 border-l-white/50 p-8 rounded-[2.5rem] shadow-[0_15px_30px_rgba(0,0,0,0.2),inset_0_0_15px_rgba(255,255,255,0.1)] flex flex-col items-center relative overflow-hidden">
+                <label className="text-2xl mb-8 font-bold flex items-center text-white drop-shadow-md uppercase tracking-widest text-center">
+                  <User className="mr-4 w-8 h-8 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.6)]" />
+                  Enter Your Name to Play
+                </label>
+                
+                <div className="w-full relative">
+                  <input 
+                    type="text" 
+                    value={playerName}
+                    onChange={handleNameChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Player Name"
+                    className="w-full text-3xl p-6 rounded-2xl bg-white/20 border border-white/40 shadow-[0_4px_10px_rgba(0,0,0,0.1),inset_0_2px_15px_rgba(255,255,255,0.3)] text-white text-center focus:outline-none focus:bg-white/30 focus:border-white/60 focus:ring-2 focus:ring-white/50 transition-all placeholder-white/70 font-bold backdrop-blur-xl"
+                    maxLength={15}
+                    autoComplete="off"
+                    spellCheck="false"
+                  />
                 </div>
 
                 <button 
                   onClick={initializeGame}
                   disabled={!playerName.trim()}
-                  className={`w-full text-3xl font-bold py-5 rounded-2xl flex items-center justify-center transition-all ${
+                  className={`w-full text-4xl font-black py-6 mt-10 rounded-2xl flex items-center justify-center transition-all duration-300 uppercase tracking-widest ${
                     playerName.trim() 
-                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 text-slate-900 shadow-[0_0_30px_rgba(16,185,129,0.4)]' 
-                      : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                      ? 'bg-[#22d3ee] border-none shadow-[0_10px_30px_rgba(34,211,238,0.5)] text-white scale-105 hover:bg-[#22d3ee] hover:shadow-[0_0_45px_rgba(34,211,238,0.9)]' 
+                      : 'bg-white/5 border border-white/10 backdrop-blur-sm text-white/30 shadow-none cursor-not-allowed'
                   }`}
                 >
-                  <Play className="mr-4 w-8 h-8" fill="currentColor" />
-                  START GAME
+                  <Play className="mr-6 w-10 h-10" fill="currentColor" />
+                  30s Go!
                 </button>
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Mini Leaderboard on Cover */}
-          <div className="w-full max-w-4xl text-center">
-            <h3 className="text-xl font-bold text-slate-400 mb-3 flex items-center justify-center">
-              <Trophy className="mr-3 w-5 h-5" /> Top 5 Memory Masters
-            </h3>
-            <div className="flex justify-center gap-4 flex-wrap mt-4">
-              {leaderboard.length === 0 ? (
-                <p className="text-slate-500 italic text-lg">No scores yet. Be the first to play!</p>
-              ) : (
-                leaderboard.slice(0, 5).map((player, idx) => (
-                  <div 
-                    key={player.id} 
-                    className={`relative px-4 py-2 rounded-xl border-2 flex items-center text-base transition-all ${
-                      idx === 0 ? 'bg-yellow-900/40 border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.35)] scale-110 mx-2' :
-                      idx === 1 ? 'bg-slate-700/80 border-slate-300 shadow-[0_0_15px_rgba(203,213,225,0.3)] scale-105 mx-2' :
-                      idx === 2 ? 'bg-amber-900/50 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)] scale-105 mx-2' :
-                      'bg-slate-800 border-slate-700'
-                    }`}
-                  >
-                    {/* Top 3 Crowns */}
-                    {idx < 3 && (
-                      <div className={`absolute -top-4 -left-4 bg-slate-900 rounded-full p-1 shadow-lg border-2 z-10 ${
-                        idx === 0 ? 'border-yellow-400' : 
-                        idx === 1 ? 'border-slate-300' : 
-                        'border-amber-500'
-                      }`}>
-                        <Crown className={`w-4 h-4 ${
-                          idx === 0 ? 'text-yellow-400' : 
-                          idx === 1 ? 'text-slate-200' : 
-                          'text-amber-500'
-                        }`} fill="currentColor" />
-                      </div>
-                    )}
-                    
-                    {/* Rank Number */}
-                    <span className={`font-black mr-2 ${
-                      idx === 0 ? 'text-yellow-400' :
-                      idx === 1 ? 'text-slate-300' :
-                      idx === 2 ? 'text-amber-500' :
-                      'text-emerald-400'
-                    }`}>#{idx + 1}</span>
-                    
-                    {/* Player Name */}
-                    <span className="text-slate-100 mr-3 font-bold truncate max-w-[100px]">{player.name}</span>
-                    
-                    {/* Score */}
-                    <span className="font-black text-white text-xl">{player.score}</span>
-                  </div>
-                ))
-              )}
+            <div className="w-[650px] flex flex-col justify-center bg-white/10 backdrop-blur-2xl border border-white/30 border-t-white/50 border-l-white/50 rounded-[3rem] p-12 shadow-[0_15px_40px_rgba(0,0,0,0.2),inset_0_0_20px_rgba(255,255,255,0.1)] relative">
+              <h3 
+                className="text-[3.5rem] w-full text-center mt-4 font-black text-slate-800 mb-12 flex items-center justify-center uppercase tracking-widest relative z-10 drop-shadow-md whitespace-nowrap"
+                style={{ fontFamily: "'Train One', sans-serif" }}
+              >
+                Top 5 Masters
+              </h3>
+              
+              <div className="flex flex-col gap-6 w-full relative z-10">
+                {leaderboard.slice(0, 5).map((player, idx) => renderPlayerRow(player, idx, false, true, true))}
+              </div>
             </div>
           </div>
         </div>
@@ -440,77 +333,57 @@ export default function App() {
 
     if (currentView === 'playing') {
       return (
-        <div className="w-full h-full bg-slate-900 text-white flex flex-col p-8 font-sans">
-          {/* Game Header */}
-          <div className="flex justify-between items-center bg-slate-800 p-6 rounded-3xl mb-6 shadow-lg border border-slate-700">
-            <div className="flex flex-col">
-              <span className="text-slate-400 text-xl font-medium">Player</span>
-              <span className="text-3xl font-bold text-emerald-400">{playerName || 'Guest'}</span>
+        <div className="w-full h-full text-white flex flex-col p-12 font-sans relative overflow-hidden bg-[#0a0f1e]">
+          <div className="absolute inset-0 z-0">
+             <img src="./bg-2.png" className="w-full h-full object-cover" alt="Game Background" />
+          </div>
+          
+          <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-600/10 blur-[200px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none z-0" />
+          
+          {/* Changed top bar to use bg-white/20 and backdrop-blur-[60px] to match the leaderboard's transparent, glassy feel */}
+          <div className="h-36 bg-white/20 backdrop-blur-[60px] border-2 border-white/50 rounded-[3rem] mb-12 shadow-[0_20px_50px_rgba(0,0,0,0.2),inset_0_0_20px_rgba(255,255,255,0.4)] relative z-10 w-full flex">
+            <div className="absolute left-10 top-1/2 -translate-y-1/2 flex items-center gap-6">
+              <div className="flex flex-col ml-4">
+                <span className="text-slate-500 text-lg font-bold uppercase tracking-widest text-left">Player</span>
+                <span className="text-4xl font-black text-slate-800 text-left">{playerName || 'Guest'}</span>
+              </div>
             </div>
             
-            <div className="flex flex-col items-center">
-              <span className="text-slate-400 text-xl font-medium">Time Left</span>
-              <div className={`text-6xl font-black flex items-center ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
-                <Timer className="mr-3 w-10 h-10" />
-                0{Math.floor(timeLeft / 60)}:{timeLeft % 60 < 10 ? `0${timeLeft % 60}` : timeLeft % 60}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+              <span className="text-slate-500 text-lg font-bold uppercase tracking-widest mb-1 text-center">Time Remaining</span>
+              <div className={`text-7xl font-black flex items-center ${timeLeft <= 10 ? 'text-red-500 animate-pulse drop-shadow-md' : 'text-slate-800'}`}>
+                <Timer className="mr-4 w-12 h-12" />
+                {String(Math.floor(timeLeft / 60)).padStart(2, '0')}:{String(timeLeft % 60).padStart(2, '0')}
               </div>
             </div>
 
-            <div className="flex flex-col items-end">
-              <span className="text-slate-400 text-xl font-medium">Score</span>
-              <span className="text-5xl font-black text-cyan-400">{score}</span>
+            <div className="absolute right-10 top-1/2 -translate-y-1/2 flex flex-col items-end mr-4">
+              <span className="text-slate-500 text-lg font-bold uppercase tracking-widest text-right">Score</span>
+              <span className="text-6xl font-black text-orange-500 text-right">{score}</span>
             </div>
           </div>
 
-          {/* Game Grid (4 rows, 5 columns for landscape) */}
-          <div className="flex-1 grid grid-cols-5 grid-rows-4 gap-4 md:gap-6 pb-4">
+          <div className="flex-1 grid grid-cols-5 grid-rows-4 gap-6 pb-6 relative z-10">
             {cards.map((card, index) => {
               const isFlipped = flippedIndices.includes(index) || matchedIndices.includes(index);
               const isMatched = matchedIndices.includes(index);
-              
               return (
-                <div 
-                  key={card.id}
-                  onClick={() => handleCardClick(index)}
-                  className="relative cursor-pointer group perspective-1000"
-                  style={{ perspective: '1000px' }}
-                >
+                <div key={card.id} onClick={() => handleCardClick(index)} className="relative cursor-pointer perspective-1000 group">
                   <div 
-                    className={`w-full h-full duration-500 transition-all relative rounded-2xl shadow-lg border-2 ${
-                      isFlipped ? 'border-emerald-400/60' : 'border-emerald-500/30 hover:border-emerald-400/60'
-                    } ${isMatched ? 'border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.4)]' : ''}`}
-                    style={{ 
-                      transformStyle: 'preserve-3d',
-                      WebkitTransformStyle: 'preserve-3d',
-                      transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
-                    }}
+                    className={`w-full h-full duration-500 transition-all relative rounded-3xl shadow-xl border-2 ${
+                      isMatched 
+                        ? 'border-yellow-400 shadow-[0_0_40px_rgba(250,204,21,0.8)] bg-yellow-900/20' 
+                        : isFlipped 
+                          ? 'border-green-400/80' 
+                          : 'border-white/10 hover:border-green-400/80 hover:bg-green-500/10'
+                    }`}
+                    style={{ transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
                   >
-                    {/* Front of Card (Cover) */}
-                    <div 
-                      className="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl flex items-center justify-center border-2 border-slate-600 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]"
-                      style={{ 
-                        backfaceVisibility: 'hidden',
-                        WebkitBackfaceVisibility: 'hidden',
-                        opacity: isFlipped ? 0 : 1,
-                        transition: 'opacity 0s linear 0.25s'
-                      }}
-                    >
-                      <span className="text-4xl font-black text-emerald-500/20">EXW</span>
+                    <div className="absolute inset-0 w-full h-full rounded-[1.4rem] overflow-hidden" style={{ backfaceVisibility: 'hidden' }}>
+                      <img src="./card-image/exw card.png" alt="Card Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     </div>
-
-                    {/* Back of Card (Product Image/Icon) */}
-                    <div 
-                      className="absolute inset-0 w-full h-full bg-slate-100 rounded-xl flex items-center justify-center"
-                      style={{ 
-                        backfaceVisibility: 'hidden',
-                        WebkitBackfaceVisibility: 'hidden',
-                        transform: 'rotateY(180deg)',
-                        opacity: isFlipped ? 1 : 0,
-                        transition: 'opacity 0s linear 0.25s'
-                      }}
-                    >
-                      {/* Placeholder: Replace with actual image tag later, e.g., <img src={card.imgUrl} className="object-contain p-4" /> */}
-                      <card.Icon className={`w-2/3 h-2/3 ${isMatched ? 'text-cyan-600' : 'text-emerald-700'}`} />
+                    <div className="absolute inset-0 w-full h-full bg-white rounded-[1.4rem] flex items-center justify-center shadow-2xl" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                      <img src={card.imagePath} alt="Product Card" className={`w-3/4 h-3/4 object-contain transition-all duration-300 ${isMatched ? 'scale-110' : ''}`} />
                     </div>
                   </div>
                 </div>
@@ -523,147 +396,82 @@ export default function App() {
 
     if (currentView === 'score_reveal') {
       return (
-        <div className="w-full h-full bg-slate-900 text-white flex flex-col items-center justify-center p-8 animate-in fade-in duration-500 font-sans">
-          <h2 className="text-7xl font-black text-white mb-8 tracking-wider uppercase">Time's Up!</h2>
-          <div className="bg-slate-800 p-16 rounded-[3rem] border-4 border-emerald-500 shadow-[0_0_100px_rgba(16,185,129,0.3)] flex flex-col items-center transform scale-110 transition-transform">
-            <p className="text-4xl text-slate-300 mb-4">Final Score</p>
-            <p className="text-9xl font-black text-transparent bg-clip-text bg-gradient-to-b from-emerald-300 to-cyan-500">
-              {score}
-            </p>
+        <div className="w-full h-full text-white flex flex-col items-center justify-center p-8 animate-in fade-in duration-700 relative overflow-hidden">
+          <div className="absolute inset-0 z-0">
+            <img src="./bg-3.png" className="w-full h-full object-cover blur-[2px]" alt="Score Background" />
+          </div>
+          <div className="relative z-10 flex flex-col items-center -translate-y-8">
+            <h2 className="text-9xl font-black text-white mb-24 tracking-widest uppercase italic drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)] text-center">Times Up!</h2>
+            <div className="bg-[#e0e0e0] p-24 rounded-[4rem] shadow-[20px_20px_60px_#bebebe,-20px_-20px_60px_#ffffff,inset_0_0_15px_rgba(0,0,0,0.02),0_4px_10px_rgba(0,0,0,0.1)] border border-white/20 flex flex-col items-center transform scale-125">
+              <p className="text-4xl text-slate-600 mb-6 font-bold uppercase tracking-widest text-center -mt-8">Your Score</p>
+              <p className="text-[12rem] font-black text-black leading-none text-center">{score}</p>
+            </div>
           </div>
         </div>
       );
     }
 
     if (currentView === 'leaderboard') {
-      // Determine the top 5
       const top5 = leaderboard.slice(0, 5);
-      // Check if current player is in top 5
-      const playerRankIndex = leaderboard.findIndex(p => p.id === currentPlayerResult.id);
-      const isInTop5 = playerRankIndex < 5;
+      const playerRankIndex = currentPlayerResult ? leaderboard.findIndex(p => p.id === currentPlayerResult.id) : -1;
+      const isInTop5 = playerRankIndex >= 0 && playerRankIndex < 5;
 
       return (
-        <div className="w-full h-full bg-slate-900 text-white flex flex-col items-center justify-center py-8 px-8 font-sans">
-          <div className="flex items-center justify-center mb-8">
-            <Trophy className="w-16 h-16 text-yellow-400 mr-6" />
-            <h1 className="text-6xl font-black text-white uppercase tracking-widest">Hall of Fame</h1>
-            <Trophy className="w-16 h-16 text-yellow-400 ml-6" />
+        <div className="w-full h-full flex flex-col items-center justify-center py-12 px-16 font-sans relative overflow-hidden">
+          <div className="absolute inset-0 z-0 bg-white">
+             <img src="./bg-4.png" className="w-full h-full object-cover" alt="Leaderboard Background" />
           </div>
 
-          <div className="w-full max-w-4xl bg-slate-800 rounded-[2.5rem] p-8 shadow-2xl border border-slate-700 flex-1 flex flex-col relative overflow-hidden">
+          <div className="w-[1000px] flex flex-col justify-center bg-white/20 backdrop-blur-[60px] border-2 border-white/50 rounded-[4rem] p-16 shadow-[0_20px_50px_rgba(0,0,0,0.2),inset_0_0_20px_rgba(255,255,255,0.4)] relative z-10">
+            <h3 
+              className="text-6xl font-bold text-white mb-12 flex items-center justify-center uppercase tracking-[0.1em] relative z-10 drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]"
+              style={{ fontFamily: "'Train One', sans-serif" }}
+            >
+              Top 5 Masters
+            </h3>
             
-            <div className="flex-1 flex flex-col justify-center gap-4">
-              {/* Render Top 5 */}
-              {top5.map((player, index) => {
-                const isCurrentPlayer = player.id === currentPlayerResult.id;
-                const isTop3 = index < 3;
-                
-                return (
-                  <div 
-                    key={player.id} 
-                    className={`flex items-center justify-between p-6 rounded-2xl border-2 transition-all duration-700 ${
-                      isCurrentPlayer 
-                        ? 'bg-emerald-900/40 border-emerald-400 scale-105 shadow-[0_0_30px_rgba(16,185,129,0.3)] z-10' 
-                        : 'bg-slate-800 border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      {/* Rank Number & Crown */}
-                      <div className="w-20 flex justify-center items-center">
-                        {isTop3 ? (
-                          <Crown className={`w-12 h-12 ${
-                            index === 0 ? 'text-yellow-400' : 
-                            index === 1 ? 'text-slate-300' : 
-                            'text-amber-600'
-                          }`} fill="currentColor" />
-                        ) : (
-                          <span className="text-4xl font-bold text-slate-500">#{index + 1}</span>
-                        )}
-                      </div>
-                      
-                      <span className={`text-4xl ml-6 font-bold ${isCurrentPlayer ? 'text-white' : 'text-slate-200'}`}>
-                        {player.name}
-                      </span>
-                      {isCurrentPlayer && <span className="ml-4 px-3 py-1 bg-emerald-500 text-xs font-bold rounded-full text-slate-900 uppercase tracking-wider animate-pulse">You</span>}
-                    </div>
-                    
-                    <div className={`text-5xl font-black ${isCurrentPlayer ? 'text-emerald-400' : 'text-cyan-400'}`}>
-                      {player.score}
-                    </div>
-                  </div>
-                );
+            <div className="flex flex-col gap-5 w-full relative z-10">
+              {top5.map((player, idx) => {
+                const isMe = currentPlayerResult && player.id === currentPlayerResult.id;
+                return renderPlayerRow(player, idx, isMe, true, false);
               })}
 
-              {/* If player is NOT in top 5, append them at the bottom */}
-              {!isInTop5 && (
+              {!isInTop5 && currentPlayerResult && (
                 <>
-                  <div className="w-full h-px bg-slate-700 my-2"></div>
-                  <div className="flex items-center justify-between p-6 rounded-2xl bg-slate-800 border-2 border-dashed border-slate-600 opacity-80">
-                    <div className="flex items-center">
-                      <div className="w-20 flex justify-center items-center">
-                        <span className="text-3xl font-bold text-slate-500">#{playerRankIndex + 1}</span>
-                      </div>
-                      <span className="text-3xl ml-6 font-bold text-slate-400">
-                        {currentPlayerResult.name}
-                      </span>
-                      <span className="ml-4 px-3 py-1 bg-slate-600 text-xs font-bold rounded-full text-slate-300 uppercase tracking-wider">You</span>
-                    </div>
-                    <div className="text-4xl font-black text-slate-400">
-                      {currentPlayerResult.score}
-                    </div>
-                  </div>
+                  <div className="h-px bg-white/40 w-full my-6" />
+                  {renderPlayerRow({ ...currentPlayerResult, rank: playerRankIndex + 1 }, playerRankIndex, true, false, false)}
                 </>
               )}
             </div>
           </div>
 
-          {/* Action Button */}
-          <div className="mt-10 w-full max-w-4xl">
+          <div className="absolute bottom-8 right-8 z-10">
             <button 
               onClick={resetToCover}
-              className="w-full py-8 bg-slate-800 hover:bg-slate-700 border-2 border-slate-600 rounded-2xl text-3xl font-bold text-white transition-all shadow-lg flex items-center justify-center"
+              className="px-6 py-3 bg-orange-500/90 hover:bg-orange-400 border-2 border-orange-300 rounded-[1rem] text-xl font-bold text-white transition-all shadow-[0_8px_15px_rgba(249,115,22,0.4)] flex items-center justify-center uppercase tracking-wider active:scale-95"
             >
-              <Play className="mr-3 w-8 h-8" />
-              PLAY AGAIN / NEXT PLAYER
+              <Play className="mr-2 w-5 h-5" fill="currentColor" />
+              Rematch!
             </button>
           </div>
-
         </div>
       );
     }
-
-    return null;
   };
 
-  // --- Main Layout Wrapper ---
   return (
-    <div 
-      className="flex items-center justify-center w-full h-screen bg-black overflow-hidden relative"
-      onClick={requestFullScreen}
-    >
-      {/* Fullscreen Toggle Button */}
-      <button 
-        onClick={toggleFullScreen}
-        className="absolute top-6 right-6 z-50 p-3 text-slate-500 hover:text-emerald-400 bg-slate-800/50 hover:bg-slate-700 rounded-full transition-all shadow-lg border border-slate-700"
-        title={isFullscreen ? "Exit Fullscreen (ESC)" : "Enter Fullscreen"}
-      >
-        {isFullscreen ? <Minimize className="w-8 h-8" /> : <Maximize className="w-8 h-8" />}
-      </button>
-
-      {/* This is the "Kiosk Scaler" box! 
-        It forces the canvas to strictly be 1920x1080 to match your 55" screen,
-        but dynamically shrinks down via CSS transform so you can view the entire UI
-        without scrolling on smaller computers/laptops.
-      */}
-      <div 
-        className="relative shadow-2xl overflow-hidden bg-slate-900"
-        style={{
-          width: '1920px',
-          height: '1080px',
-          transform: `scale(${scale})`,
-          transformOrigin: 'center'
-        }}
-      >
+    <div className="flex items-center justify-center w-full h-screen bg-black overflow-hidden relative" onClick={requestFullScreen} style={{ fontFamily: "'Montserrat', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Bungee+Inline&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Train+One&display=swap');
+      `}</style>
+      {!isFullscreen && (
+        <button onClick={toggleFullScreen} className="absolute top-10 right-10 z-[100] p-4 text-white/40 hover:text-emerald-400 bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-full transition-all shadow-2xl border border-white/10">
+          <Maximize className="w-10 h-10" />
+        </button>
+      )}
+      <div className="relative shadow-2xl overflow-hidden bg-[#0a0f1e]" style={{ width: '1920px', height: '1080px', transform: `scale(${scale})`, transformOrigin: 'center' }}>
         {renderCurrentView()}
       </div>
     </div>
