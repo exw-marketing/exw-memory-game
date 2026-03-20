@@ -160,9 +160,7 @@ export default function App() {
   const renderPlayerRow = (player, index, isCurrentPlayer, isRankedTop5, isCoverView = false) => {
     let rowBgClass = '';
     
-    // Determine if this specific row is the current player in 4th/5th place on the ending screen
     const isHighContrastRow = isCurrentPlayer && isRankedTop5 && index >= 3 && !isCoverView;
-    const isCurrentPlayerTop3 = isCurrentPlayer && index < 3 && !isCoverView;
     
     if (isCoverView) {
       rowBgClass = index < 3
@@ -171,13 +169,10 @@ export default function App() {
     } else {
       if (isCurrentPlayer) {
         if (index < 3) {
-          // Top 3 + Current Player: Gold-ish glassy background with strong glowing gold border
           rowBgClass = 'bg-yellow-500/50 backdrop-blur-xl border-2 border-yellow-300 shadow-[0_0_35px_rgba(250,204,21,0.9),inset_0_0_20px_rgba(255,255,255,0.5)] transform scale-110 z-30 rounded-3xl';
         } else if (isRankedTop5) {
-          // Rank 4-5 + Current Player: Clear glassy white background with a bright white glowing border
           rowBgClass = 'bg-white/20 backdrop-blur-xl border-2 border-white shadow-[0_0_30px_rgba(255,255,255,0.8),inset_0_0_20px_rgba(255,255,255,0.5)] transform scale-[1.05] z-30 rounded-3xl';
         } else {
-          // Not in Top 5 + Current Player: Emerald glass and emerald glow
           rowBgClass = 'bg-emerald-500/50 backdrop-blur-xl border-2 border-emerald-300 shadow-[0_0_30px_rgba(52,211,153,0.8),inset_0_0_20px_rgba(255,255,255,0.3)] transform scale-[1.02] z-30 rounded-3xl';
         }
       } else {
@@ -199,8 +194,8 @@ export default function App() {
             isCoverView 
               ? 'bg-black/10 border border-white/20' 
               : isHighContrastRow 
-                ? 'bg-slate-800/20 border border-white/40' // Darken the rank box slightly to make white text pop
-                : 'bg-black/10 border border-white/10' // Restored dark background for the crown icon universally
+                ? 'bg-slate-800/20 border border-white/40' 
+                : 'bg-black/10 border border-white/10' 
           }`}>
             {index < 3 ? (
               <Crown className={`w-8 h-8 ${
@@ -340,7 +335,6 @@ export default function App() {
           
           <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-600/10 blur-[200px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none z-0" />
           
-          {/* Changed top bar to use bg-white/20 and backdrop-blur-[60px] to match the leaderboard's transparent, glassy feel */}
           <div className="h-36 bg-white/20 backdrop-blur-[60px] border-2 border-white/50 rounded-[3rem] mb-12 shadow-[0_20px_50px_rgba(0,0,0,0.2),inset_0_0_20px_rgba(255,255,255,0.4)] relative z-10 w-full flex">
             <div className="absolute left-10 top-1/2 -translate-y-1/2 flex items-center gap-6">
               <div className="flex flex-col ml-4">
@@ -359,7 +353,9 @@ export default function App() {
 
             <div className="absolute right-10 top-1/2 -translate-y-1/2 flex flex-col items-end mr-4">
               <span className="text-slate-500 text-lg font-bold uppercase tracking-widest text-right">Score</span>
-              <span className="text-6xl font-black text-orange-500 text-right">{score}</span>
+              <span className="text-6xl font-black text-cyan-400 text-right">
+                {score}
+              </span>
             </div>
           </div>
 
