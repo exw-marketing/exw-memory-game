@@ -175,10 +175,10 @@ export default function App() {
     return (
       <div 
         key={player.id} 
-        className={`relative px-4 lg:px-8 py-3 lg:py-5 flex items-center justify-between transition-all duration-500 ${rowBgClass}`}
+        className={`relative px-4 xl:px-6 2xl:px-8 py-3 2xl:py-5 flex items-center justify-between transition-all duration-500 ${rowBgClass}`}
       >
-        <div className="flex items-center gap-3 lg:gap-6">
-          <div className={`w-12 h-12 lg:w-16 lg:h-16 rounded-xl lg:rounded-2xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)] flex items-center justify-center ${
+        <div className="flex items-center gap-3 xl:gap-4 2xl:gap-6">
+          <div className={`w-10 h-10 xl:w-12 xl:h-12 2xl:w-16 2xl:h-16 rounded-xl 2xl:rounded-2xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)] flex items-center justify-center shrink-0 ${
             isCoverView 
               ? 'bg-black/10 border border-white/20' 
               : isHighContrastRow 
@@ -186,24 +186,24 @@ export default function App() {
                 : 'bg-black/10 border border-white/10' 
           }`}>
             {index < 3 ? (
-              <Crown className={`w-6 h-6 lg:w-8 lg:h-8 ${
+              <Crown className={`w-5 h-5 xl:w-6 xl:h-6 2xl:w-8 2xl:h-8 ${
                 index === 0 ? 'text-[#FFD700] drop-shadow-[0_0_12px_rgba(255,215,0,0.9)]' : 
                 index === 1 ? 'text-[#E3E4E5] drop-shadow-[0_0_12px_rgba(227,228,229,0.9)]' : 
                 'text-[#8B4513] drop-shadow-[0_0_12px_rgba(139,69,19,0.9)]'
               }`} fill="currentColor" />
             ) : (
-              <span className={`text-xl lg:text-2xl font-black ${isHighContrastRow ? 'text-white drop-shadow-md' : 'text-white/50'}`}>{index + 1}</span>
+              <span className={`text-lg xl:text-xl 2xl:text-2xl font-black ${isHighContrastRow ? 'text-white drop-shadow-md' : 'text-white/50'}`}>{index + 1}</span>
             )}
           </div>
-          <span className={`text-2xl lg:text-4xl font-bold tracking-wide ${isHighContrastRow ? 'text-slate-800 drop-shadow-sm' : 'text-white drop-shadow-md'}`}>
+          <span className={`text-xl xl:text-2xl 2xl:text-4xl font-bold tracking-wide truncate ${isHighContrastRow ? 'text-slate-800 drop-shadow-sm' : 'text-white drop-shadow-md'}`}>
             {player.name}
           </span>
         </div>
-        <div className="flex flex-col items-end">
-           <span className={`text-3xl lg:text-5xl font-black ${isHighContrastRow ? 'text-slate-800 drop-shadow-sm' : 'text-white drop-shadow-lg'}`}>
+        <div className="flex flex-col items-end pl-2">
+           <span className={`text-2xl xl:text-3xl 2xl:text-5xl font-black ${isHighContrastRow ? 'text-slate-800 drop-shadow-sm' : 'text-white drop-shadow-lg'}`}>
              {player.score}
            </span>
-           <span className={`text-[10px] lg:text-xs font-bold uppercase tracking-widest ${index < 3 ? 'text-white/80' : (isHighContrastRow ? 'text-slate-600' : 'text-white/50')}`}>
+           <span className={`text-[10px] 2xl:text-xs font-bold uppercase tracking-widest ${index < 3 ? 'text-white/80' : (isHighContrastRow ? 'text-slate-600' : 'text-white/50')}`}>
              Points
            </span>
         </div>
@@ -214,18 +214,20 @@ export default function App() {
   const renderCurrentView = () => {
     if (currentView === 'cover') {
       return (
-        <div className="w-full min-h-screen flex items-center justify-center relative overflow-y-auto bg-white overflow-x-hidden">
+        <div className="w-full min-h-screen flex items-center justify-center relative overflow-y-auto overflow-x-hidden bg-white">
           <div className="absolute inset-0 z-0 bg-gradient-to-br from-white to-[#E0E0E0] fixed">
             {!bgFailed && (
               <img src="./bg.png" onError={() => setBgFailed(true)} className="w-full h-full object-cover mix-blend-multiply opacity-100" alt="Background" />
             )}
           </div>
 
-          <div className="w-full max-w-[1780px] relative z-10 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-24 p-4 py-12 lg:p-12 min-h-screen">
-            <div className="flex-1 w-full max-w-[950px] flex flex-col items-center justify-center mt-8 lg:mt-0">
-              <div className="mb-8 lg:mb-16 flex flex-col items-center w-full">
+          <div className="w-full max-w-[1780px] px-4 md:px-8 relative z-10 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-10 2xl:gap-24 py-12 lg:py-8 min-h-screen">
+            {/* Left Content / Titles */}
+            <div className="flex-1 w-full flex flex-col items-center justify-center mt-8 lg:mt-0 min-w-0">
+              <div className="mb-8 2xl:mb-16 flex flex-col items-center w-full min-w-0">
+                {/* Note the font sizes dip at lg: so they fit side-by-side without overflowing, then grow at xl/2xl */}
                 <h1 
-                  className="text-5xl md:text-7xl lg:text-[7.5rem] uppercase text-center leading-[1.1] drop-shadow-2xl mb-2 whitespace-normal lg:whitespace-nowrap" 
+                  className="text-5xl md:text-7xl lg:text-5xl xl:text-6xl 2xl:text-[7.5rem] uppercase text-center leading-[1.1] drop-shadow-2xl mb-2 2xl:mb-4 whitespace-normal lg:whitespace-nowrap w-full" 
                   style={{ 
                     fontFamily: "'Bungee Inline', sans-serif", 
                     fontWeight: 400,
@@ -237,7 +239,7 @@ export default function App() {
                   REACH TOP 3,
                 </h1>
                 <h1 
-                  className="text-5xl md:text-7xl lg:text-[7.5rem] uppercase text-center leading-[1.1] drop-shadow-2xl mb-4 lg:mb-6 whitespace-normal lg:whitespace-nowrap" 
+                  className="text-5xl md:text-7xl lg:text-5xl xl:text-6xl 2xl:text-[7.5rem] uppercase text-center leading-[1.1] drop-shadow-2xl mb-4 2xl:mb-6 whitespace-normal lg:whitespace-nowrap w-full" 
                   style={{ 
                     fontFamily: "'Bungee Inline', sans-serif", 
                     fontWeight: 400,
@@ -249,7 +251,7 @@ export default function App() {
                   WIN A PRIZE!
                 </h1>
                 <h2 
-                  className="text-xl md:text-3xl lg:text-[2.75rem] text-center tracking-[0.1em] lg:tracking-[0.15em] uppercase drop-shadow-lg whitespace-normal lg:whitespace-nowrap" 
+                  className="text-xl md:text-3xl lg:text-xl xl:text-2xl 2xl:text-[2.75rem] text-center tracking-[0.1em] 2xl:tracking-[0.15em] uppercase drop-shadow-lg whitespace-normal lg:whitespace-nowrap w-full" 
                   style={{ 
                     fontFamily: "'Bungee Inline', sans-serif", 
                     fontWeight: 400,
@@ -262,9 +264,9 @@ export default function App() {
                 </h2>
               </div>
 
-              <div className="w-full max-w-xl bg-slate-800/30 backdrop-blur-2xl border border-white/30 border-t-white/50 border-l-white/50 p-6 lg:p-8 rounded-3xl lg:rounded-[2.5rem] shadow-[0_15px_30px_rgba(0,0,0,0.2),inset_0_0_15px_rgba(255,255,255,0.1)] flex flex-col items-center relative overflow-hidden">
-                <label className="text-xl lg:text-2xl mb-6 lg:mb-8 font-bold flex items-center text-white drop-shadow-md uppercase tracking-widest text-center">
-                  <User className="mr-3 lg:mr-4 w-6 h-6 lg:w-8 lg:h-8 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.6)]" />
+              <div className="w-full max-w-sm md:max-w-md 2xl:max-w-xl bg-slate-800/30 backdrop-blur-2xl border border-white/30 border-t-white/50 border-l-white/50 p-6 2xl:p-8 rounded-3xl 2xl:rounded-[2.5rem] shadow-[0_15px_30px_rgba(0,0,0,0.2),inset_0_0_15px_rgba(255,255,255,0.1)] flex flex-col items-center relative overflow-hidden">
+                <label className="text-lg xl:text-xl 2xl:text-2xl mb-6 2xl:mb-8 font-bold flex items-center text-white drop-shadow-md uppercase tracking-widest text-center">
+                  <User className="mr-3 2xl:mr-4 w-6 h-6 2xl:w-8 2xl:h-8 text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.6)]" />
                   Enter Your Name to Play
                 </label>
                 
@@ -275,7 +277,7 @@ export default function App() {
                     onChange={handleNameChange}
                     onKeyDown={handleKeyDown}
                     placeholder="Player Name"
-                    className="w-full text-2xl lg:text-3xl p-4 lg:p-6 rounded-2xl bg-white/20 border border-white/40 shadow-[0_4px_10px_rgba(0,0,0,0.1),inset_0_2px_15px_rgba(255,255,255,0.3)] text-white text-center focus:outline-none focus:bg-white/30 focus:border-white/60 focus:ring-2 focus:ring-white/50 transition-all placeholder-white/70 font-bold backdrop-blur-xl"
+                    className="w-full text-xl 2xl:text-3xl p-4 2xl:p-6 rounded-2xl bg-white/20 border border-white/40 shadow-[0_4px_10px_rgba(0,0,0,0.1),inset_0_2px_15px_rgba(255,255,255,0.3)] text-white text-center focus:outline-none focus:bg-white/30 focus:border-white/60 focus:ring-2 focus:ring-white/50 transition-all placeholder-white/70 font-bold backdrop-blur-xl"
                     maxLength={15}
                     autoComplete="off"
                     spellCheck="false"
@@ -285,27 +287,28 @@ export default function App() {
                 <button 
                   onClick={initializeGame}
                   disabled={!playerName.trim()}
-                  className={`w-full text-2xl lg:text-4xl font-black py-4 lg:py-6 mt-8 lg:mt-10 rounded-2xl flex items-center justify-center transition-all duration-300 uppercase tracking-widest ${
+                  className={`w-full text-xl 2xl:text-4xl font-black py-4 2xl:py-6 mt-6 2xl:mt-10 rounded-2xl flex items-center justify-center transition-all duration-300 uppercase tracking-widest ${
                     playerName.trim() 
                       ? 'bg-[#22d3ee] border-none shadow-[0_10px_30px_rgba(34,211,238,0.5)] text-white scale-105 hover:bg-[#22d3ee] hover:shadow-[0_0_45px_rgba(34,211,238,0.9)]' 
                       : 'bg-white/5 border border-white/10 backdrop-blur-sm text-white/30 shadow-none cursor-not-allowed'
                   }`}
                 >
-                  <Play className="mr-3 lg:mr-6 w-8 h-8 lg:w-10 lg:h-10" fill="currentColor" />
+                  <Play className="mr-3 2xl:mr-6 w-6 h-6 2xl:w-10 2xl:h-10" fill="currentColor" />
                   30s Go!
                 </button>
               </div>
             </div>
 
-            <div className="w-full lg:w-[650px] flex flex-col justify-center bg-white/10 backdrop-blur-2xl border border-white/30 border-t-white/50 border-l-white/50 rounded-3xl lg:rounded-[3rem] p-6 lg:p-12 shadow-[0_15px_40px_rgba(0,0,0,0.2),inset_0_0_20px_rgba(255,255,255,0.1)] relative">
+            {/* Right Content / Leaderboard */}
+            <div className="w-full lg:w-[400px] xl:w-[500px] 2xl:w-[650px] flex flex-col justify-center bg-white/10 backdrop-blur-2xl border border-white/30 border-t-white/50 border-l-white/50 rounded-3xl 2xl:rounded-[3rem] p-6 2xl:p-12 shadow-[0_15px_40px_rgba(0,0,0,0.2),inset_0_0_20px_rgba(255,255,255,0.1)] relative shrink-0">
               <h3 
-                className="text-3xl lg:text-[3.5rem] w-full text-center mt-2 lg:mt-4 font-black text-slate-800 mb-8 lg:mb-12 flex items-center justify-center uppercase tracking-widest relative z-10 drop-shadow-md whitespace-nowrap"
+                className="text-3xl xl:text-4xl 2xl:text-[3.5rem] w-full text-center mt-2 2xl:mt-4 font-black text-slate-800 mb-6 2xl:mb-12 flex items-center justify-center uppercase tracking-widest relative z-10 drop-shadow-md whitespace-nowrap"
                 style={{ fontFamily: "'Train One', sans-serif" }}
               >
                 Top 5 Masters
               </h3>
               
-              <div className="flex flex-col gap-4 lg:gap-6 w-full relative z-10">
+              <div className="flex flex-col gap-3 2xl:gap-6 w-full relative z-10">
                 {leaderboard.slice(0, 5).map((player, idx) => renderPlayerRow(player, idx, false, true, true))}
               </div>
             </div>
@@ -316,45 +319,45 @@ export default function App() {
 
     if (currentView === 'playing') {
       return (
-        <div className="w-full min-h-screen text-white flex flex-col p-4 md:p-8 lg:p-12 font-sans relative overflow-x-hidden overflow-y-auto bg-[#0a0f1e]">
+        <div className="w-full min-h-screen text-white flex flex-col p-4 md:p-8 2xl:p-12 font-sans relative overflow-x-hidden overflow-y-auto bg-[#0a0f1e]">
           <div className="absolute inset-0 z-0 fixed">
              <img src="./bg-2.png" className="w-full h-full object-cover" alt="Game Background" />
           </div>
           
-          <div className="absolute top-0 right-0 w-[400px] h-[400px] lg:w-[800px] lg:h-[800px] bg-blue-600/10 blur-[100px] lg:blur-[200px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none z-0 fixed" />
+          <div className="absolute top-0 right-0 w-[400px] h-[400px] 2xl:w-[800px] 2xl:h-[800px] bg-blue-600/10 blur-[100px] 2xl:blur-[200px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none z-0 fixed" />
           
-          <div className="py-4 lg:py-0 lg:h-36 bg-white/20 backdrop-blur-3xl lg:backdrop-blur-[60px] border border-white/30 lg:border-2 lg:border-white/50 rounded-3xl lg:rounded-[3rem] mb-6 lg:mb-12 shadow-[0_10px_30px_rgba(0,0,0,0.2),inset_0_0_20px_rgba(255,255,255,0.4)] relative z-10 w-full flex flex-col md:flex-row items-center justify-between px-6 lg:px-10 gap-4 md:gap-0">
+          <div className="py-4 2xl:py-0 2xl:h-36 bg-white/20 backdrop-blur-3xl 2xl:backdrop-blur-[60px] border border-white/30 2xl:border-2 2xl:border-white/50 rounded-3xl 2xl:rounded-[3rem] mb-6 2xl:mb-12 shadow-[0_10px_30px_rgba(0,0,0,0.2),inset_0_0_20px_rgba(255,255,255,0.4)] relative z-10 w-full flex flex-col md:flex-row items-center justify-between px-6 2xl:px-10 gap-4 md:gap-0">
             <div className="flex items-center gap-4 w-full md:w-1/3 justify-center md:justify-start">
               <div className="flex flex-col">
-                <span className="text-slate-300 md:text-slate-500 text-sm lg:text-lg font-bold uppercase tracking-widest text-center md:text-left">Player</span>
-                <span className="text-2xl lg:text-4xl font-black text-white md:text-slate-800 text-center md:text-left">{playerName || 'Guest'}</span>
+                <span className="text-slate-300 md:text-slate-500 text-xs 2xl:text-lg font-bold uppercase tracking-widest text-center md:text-left">Player</span>
+                <span className="text-xl md:text-2xl 2xl:text-4xl font-black text-white md:text-slate-800 text-center md:text-left truncate max-w-[150px] 2xl:max-w-[250px]">{playerName || 'Guest'}</span>
               </div>
             </div>
             
             <div className="flex flex-col items-center w-full md:w-1/3 justify-center order-first md:order-none mb-2 md:mb-0">
-              <span className="text-slate-300 md:text-slate-500 text-sm lg:text-lg font-bold uppercase tracking-widest mb-1 text-center">Time Remaining</span>
-              <div className={`text-5xl lg:text-7xl font-black flex items-center ${timeLeft <= 10 ? 'text-red-400 md:text-red-500 animate-pulse drop-shadow-md' : 'text-white md:text-slate-800'}`}>
-                <Timer className="mr-2 lg:mr-4 w-8 h-8 lg:w-12 lg:h-12" />
+              <span className="text-slate-300 md:text-slate-500 text-xs 2xl:text-lg font-bold uppercase tracking-widest mb-1 text-center">Time Remaining</span>
+              <div className={`text-4xl md:text-5xl 2xl:text-7xl font-black flex items-center ${timeLeft <= 10 ? 'text-red-400 md:text-red-500 animate-pulse drop-shadow-md' : 'text-white md:text-slate-800'}`}>
+                <Timer className="mr-2 2xl:mr-4 w-6 h-6 md:w-8 md:h-8 2xl:w-12 2xl:h-12" />
                 {String(Math.floor(timeLeft / 60)).padStart(2, '0')}:{String(timeLeft % 60).padStart(2, '0')}
               </div>
             </div>
 
             <div className="flex flex-col items-center md:items-end w-full md:w-1/3 justify-center md:justify-end">
-              <span className="text-slate-300 md:text-slate-500 text-sm lg:text-lg font-bold uppercase tracking-widest text-center md:text-right">Score</span>
-              <span className="text-4xl lg:text-6xl font-black text-cyan-300 md:text-cyan-400 text-center md:text-right">
+              <span className="text-slate-300 md:text-slate-500 text-xs 2xl:text-lg font-bold uppercase tracking-widest text-center md:text-right">Score</span>
+              <span className="text-3xl md:text-4xl 2xl:text-6xl font-black text-cyan-300 md:text-cyan-400 text-center md:text-right">
                 {score}
               </span>
             </div>
           </div>
 
-          <div className="flex-1 w-full max-w-[1600px] mx-auto grid grid-cols-4 md:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 pb-6 relative z-10 min-h-[50vh]">
+          <div className="flex-1 w-full max-w-[1600px] mx-auto grid grid-cols-4 md:grid-cols-5 gap-3 sm:gap-4 xl:gap-6 pb-6 relative z-10 min-h-[50vh]">
             {cards.map((card, index) => {
               const isFlipped = flippedIndices.includes(index) || matchedIndices.includes(index);
               const isMatched = matchedIndices.includes(index);
               return (
                 <div key={card.id} onClick={() => handleCardClick(index)} className="relative cursor-pointer perspective-1000 group aspect-[3/4] md:aspect-auto">
                   <div 
-                    className={`w-full h-full duration-500 transition-all relative rounded-xl lg:rounded-3xl shadow-xl border-2 ${
+                    className={`w-full h-full duration-500 transition-all relative rounded-xl 2xl:rounded-3xl shadow-xl border-2 ${
                       isMatched 
                         ? 'border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] md:shadow-[0_0_40px_rgba(250,204,21,0.8)] bg-yellow-900/20' 
                         : isFlipped 
@@ -363,14 +366,12 @@ export default function App() {
                     }`}
                     style={{ transformStyle: 'preserve-3d', transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
                   >
-                    <div className="absolute inset-0 w-full h-full rounded-[0.8rem] lg:rounded-[1.4rem] overflow-hidden" style={{ backfaceVisibility: 'hidden' }}>
-                      <img src="./card-image/exw card.png" alt="Card Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 bg-slate-800 flex items-center justify-center text-xs text-center p-2 text-white/50" />
+                    <div className="absolute inset-0 w-full h-full rounded-[0.8rem] 2xl:rounded-[1.4rem] overflow-hidden bg-white" style={{ backfaceVisibility: 'hidden' }}>
+                      <img src="./card-image/exw card.png" alt="Card Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     </div>
-                    <div className="absolute inset-0 w-full h-full bg-white rounded-[0.8rem] lg:rounded-[1.4rem] flex items-center justify-center shadow-2xl p-2" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                      <img src={card.imagePath} alt="Product Card" className={`w-full h-full object-contain transition-all duration-300 ${isMatched ? 'scale-110' : ''}`} />
-                      <span className="absolute bottom-1 text-[8px] md:text-[10px] text-gray-400 pointer-events-none opacity-50 px-1 text-center leading-tight truncate w-full">
-                        {card.imagePath.split('/').pop().replace('.png', '')}
-                      </span>
+                    {/* Fixed: Added overflow-hidden to the front face and removed scale effect to guarantee images never break outside boundaries */}
+                    <div className="absolute inset-0 w-full h-full bg-white rounded-[0.8rem] 2xl:rounded-[1.4rem] flex items-center justify-center shadow-2xl p-2 md:p-3 2xl:p-4 overflow-hidden" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                      <img src={card.imagePath} alt="Product Card" className="w-full h-full object-contain transition-all duration-300" />
                     </div>
                   </div>
                 </div>
@@ -383,15 +384,15 @@ export default function App() {
 
     if (currentView === 'score_reveal') {
       return (
-        <div className="w-full h-full min-h-screen text-white flex flex-col items-center justify-center p-4 lg:p-8 animate-in fade-in duration-700 relative overflow-hidden">
+        <div className="w-full h-full min-h-screen text-white flex flex-col items-center justify-center p-4 2xl:p-8 animate-in fade-in duration-700 relative overflow-hidden">
           <div className="absolute inset-0 z-0 fixed">
             <img src="./bg-3.png" className="w-full h-full object-cover blur-[2px]" alt="Score Background" />
           </div>
-          <div className="relative z-10 flex flex-col items-center -translate-y-4 lg:-translate-y-8">
-            <h2 className="text-6xl md:text-8xl lg:text-9xl font-black text-white mb-12 lg:mb-24 tracking-widest uppercase italic drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)] text-center">Times Up!</h2>
-            <div className="bg-[#e0e0e0] p-12 lg:p-24 rounded-3xl lg:rounded-[4rem] shadow-[10px_10px_30px_#bebebe,-10px_-10px_30px_#ffffff,inset_0_0_15px_rgba(0,0,0,0.02),0_4px_10px_rgba(0,0,0,0.1)] border border-white/20 flex flex-col items-center transform scale-100 lg:scale-125">
-              <p className="text-2xl lg:text-4xl text-slate-600 mb-4 lg:mb-6 font-bold uppercase tracking-widest text-center lg:-mt-8">Your Score</p>
-              <p className="text-[6rem] lg:text-[12rem] font-black text-black leading-none text-center">{score}</p>
+          <div className="relative z-10 flex flex-col items-center -translate-y-4 2xl:-translate-y-8">
+            <h2 className="text-5xl md:text-7xl xl:text-8xl 2xl:text-9xl font-black text-white mb-12 2xl:mb-24 tracking-widest uppercase italic drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)] text-center">Times Up!</h2>
+            <div className="bg-[#e0e0e0] p-10 md:p-16 2xl:p-24 rounded-3xl 2xl:rounded-[4rem] shadow-[10px_10px_30px_#bebebe,-10px_-10px_30px_#ffffff,inset_0_0_15px_rgba(0,0,0,0.02),0_4px_10px_rgba(0,0,0,0.1)] border border-white/20 flex flex-col items-center transform scale-100 2xl:scale-125">
+              <p className="text-2xl 2xl:text-4xl text-slate-600 mb-4 2xl:mb-6 font-bold uppercase tracking-widest text-center 2xl:-mt-8">Your Score</p>
+              <p className="text-[6rem] md:text-[8rem] 2xl:text-[12rem] font-black text-black leading-none text-center">{score}</p>
             </div>
           </div>
         </div>
@@ -404,20 +405,20 @@ export default function App() {
       const isInTop5 = playerRankIndex >= 0 && playerRankIndex < 5;
 
       return (
-        <div className="w-full min-h-screen flex flex-col items-center justify-center py-12 px-4 md:px-8 lg:px-16 font-sans relative overflow-x-hidden overflow-y-auto">
+        <div className="w-full min-h-screen flex flex-col items-center justify-center py-12 px-4 md:px-8 2xl:px-16 font-sans relative overflow-x-hidden overflow-y-auto">
           <div className="absolute inset-0 z-0 bg-white fixed">
              <img src="./bg-4.png" className="w-full h-full object-cover" alt="Leaderboard Background" />
           </div>
 
-          <div className="w-full max-w-[1000px] flex flex-col justify-center bg-white/20 backdrop-blur-2xl lg:backdrop-blur-[60px] border border-white/30 lg:border-2 lg:border-white/50 rounded-3xl lg:rounded-[4rem] p-6 lg:p-16 shadow-[0_10px_30px_rgba(0,0,0,0.2),inset_0_0_20px_rgba(255,255,255,0.4)] relative z-10 mt-8 mb-24">
+          <div className="w-[90%] max-w-[1000px] flex flex-col justify-center bg-white/20 backdrop-blur-2xl 2xl:backdrop-blur-[60px] border border-white/30 2xl:border-2 2xl:border-white/50 rounded-3xl 2xl:rounded-[4rem] p-6 md:p-10 2xl:p-16 shadow-[0_10px_30px_rgba(0,0,0,0.2),inset_0_0_20px_rgba(255,255,255,0.4)] relative z-10 mt-8 mb-24">
             <h3 
-              className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-8 lg:mb-12 flex items-center justify-center uppercase tracking-[0.05em] lg:tracking-[0.1em] relative z-10 drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)] text-center"
+              className="text-3xl md:text-4xl xl:text-5xl 2xl:text-6xl font-bold text-white mb-8 2xl:mb-12 flex items-center justify-center uppercase tracking-[0.05em] 2xl:tracking-[0.1em] relative z-10 drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)] text-center"
               style={{ fontFamily: "'Train One', sans-serif" }}
             >
               Top 5 Masters
             </h3>
             
-            <div className="flex flex-col gap-3 lg:gap-5 w-full relative z-10">
+            <div className="flex flex-col gap-3 2xl:gap-5 w-full relative z-10">
               {top5.map((player, idx) => {
                 const isMe = currentPlayerResult && player.id === currentPlayerResult.id;
                 return renderPlayerRow(player, idx, isMe, true, false);
@@ -425,17 +426,17 @@ export default function App() {
 
               {!isInTop5 && currentPlayerResult && (
                 <>
-                  <div className="h-px bg-white/40 w-full my-4 lg:my-6" />
+                  <div className="h-px bg-white/40 w-full my-4 2xl:my-6" />
                   {renderPlayerRow({ ...currentPlayerResult, rank: playerRankIndex + 1 }, playerRankIndex, true, false, false)}
                 </>
               )}
             </div>
           </div>
 
-          <div className="fixed bottom-4 lg:bottom-8 right-4 lg:right-8 z-50">
+          <div className="fixed bottom-4 2xl:bottom-8 right-4 2xl:right-8 z-50">
             <button 
               onClick={resetToCover}
-              className="px-4 py-3 lg:px-6 lg:py-3 bg-orange-500/90 hover:bg-orange-400 border-2 border-orange-300 rounded-[1rem] text-lg lg:text-xl font-bold text-white transition-all shadow-[0_8px_15px_rgba(249,115,22,0.4)] flex items-center justify-center uppercase tracking-wider active:scale-95"
+              className="px-4 py-3 2xl:px-6 2xl:py-3 bg-orange-500/90 hover:bg-orange-400 border-2 border-orange-300 rounded-[1rem] text-lg 2xl:text-xl font-bold text-white transition-all shadow-[0_8px_15px_rgba(249,115,22,0.4)] flex items-center justify-center uppercase tracking-wider active:scale-95"
             >
               <Play className="mr-2 w-5 h-5" fill="currentColor" />
               Rematch!
@@ -454,8 +455,8 @@ export default function App() {
         @import url('https://fonts.googleapis.com/css2?family=Train+One&display=swap');
       `}</style>
       {!isFullscreen && (
-        <button onClick={toggleFullScreen} className="fixed top-4 right-4 lg:top-10 lg:right-10 z-[100] p-3 lg:p-4 text-white/60 hover:text-emerald-400 bg-black/20 lg:bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-full transition-all shadow-2xl border border-white/10">
-          <Maximize className="w-6 h-6 lg:w-10 lg:h-10" />
+        <button onClick={toggleFullScreen} className="fixed top-4 right-4 2xl:top-10 2xl:right-10 z-[100] p-3 2xl:p-4 text-white/60 hover:text-emerald-400 bg-black/20 2xl:bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-full transition-all shadow-2xl border border-white/10">
+          <Maximize className="w-6 h-6 2xl:w-10 2xl:h-10" />
         </button>
       )}
       <div className="relative w-full min-h-screen">
