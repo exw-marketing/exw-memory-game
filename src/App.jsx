@@ -21,11 +21,11 @@ const PRODUCT_IMAGES = [
 ];
 
 const initialLeaderboard = [
-  { id: 'test-1', name: 'Y4', score: 100, timestamp: Date.now() - 400000 },
-  { id: 'test-2', name: 'Y2', score: 60, timestamp: Date.now() - 300000 },
-  { id: 'test-3', name: 'Y3', score: 50, timestamp: Date.now() - 200000 },
-  { id: 'test-4', name: 'Yen', score: 20, timestamp: Date.now() - 100000 },
-  { id: 'test-5', name: 'Guest', score: 10, timestamp: Date.now() - 50000 },
+  { id: 'empty-1', name: '---', score: 0, timestamp: 5 },
+  { id: 'empty-2', name: '---', score: 0, timestamp: 4 },
+  { id: 'empty-3', name: '---', score: 0, timestamp: 3 },
+  { id: 'empty-4', name: '---', score: 0, timestamp: 2 },
+  { id: 'empty-5', name: '---', score: 0, timestamp: 1 },
 ];
 
 export default function App() {
@@ -42,9 +42,12 @@ export default function App() {
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(GAME_TIME);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [scorePhase, setScorePhase] = useState('timesUp');
   const [currentPlayerResult, setCurrentPlayerResult] = useState(null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const sequenceTimeouts = useRef([]);
 
   useEffect(() => {
     const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -84,13 +87,27 @@ export default function App() {
     }
   };
 
+  const showRules = () => {
+    setCurrentView('rules');
+  };
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && playerName.trim()) {
-      initializeGame();
+      if (currentView === 'cover') {
+        showRules();
+      } else if (currentView === 'rules') {
+        initializeGame();
+      }
     }
   };
 
+  const clearSequenceTimeouts = () => {
+    sequenceTimeouts.current.forEach(clearTimeout);
+    sequenceTimeouts.current = [];
+  };
+
   const initializeGame = () => {
+    clearSequenceTimeouts();
     const deck = [...PRODUCT_IMAGES, ...PRODUCT_IMAGES]
       .map((imagePath, index) => ({ id: index, imagePath }))
       .sort(() => Math.random() - 0.5);
@@ -99,21 +116,33 @@ export default function App() {
     setMatchedIndices([]);
     setScore(0);
     setTimeLeft(GAME_TIME);
+    setIsPreviewing(true);
+    setScorePhase('timesUp'); // Reset score phase to prevent flash bugs
     setCurrentView('playing');
   };
 
   useEffect(() => {
+    let previewTimer;
+    if (currentView === 'playing' && isPreviewing) {
+      previewTimer = setTimeout(() => {
+        setIsPreviewing(false);
+      }, 3000);
+    }
+    return () => clearTimeout(previewTimer);
+  }, [currentView, isPreviewing]);
+
+  useEffect(() => {
     let timer;
-    if (currentView === 'playing' && timeLeft > 0) {
+    if (currentView === 'playing' && !isPreviewing && timeLeft > 0) {
       timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    } else if (currentView === 'playing' && timeLeft === 0) {
+    } else if (currentView === 'playing' && !isPreviewing && timeLeft === 0) {
       endGame();
     }
     return () => clearInterval(timer);
-  }, [currentView, timeLeft]);
+  }, [currentView, timeLeft, isPreviewing]);
 
   const handleCardClick = (index) => {
-    if (isProcessing || flippedIndices.includes(index) || matchedIndices.includes(index)) return;
+    if (isProcessing || isPreviewing || flippedIndices.includes(index) || matchedIndices.includes(index)) return;
     const newFlipped = [...flippedIndices, index];
     setFlippedIndices(newFlipped);
     if (newFlipped.length === 2) {
@@ -133,15 +162,29 @@ export default function App() {
   };
 
   const endGame = () => {
+    clearSequenceTimeouts();
+    setScorePhase('timesUp');
     setCurrentView('score_reveal');
     const newResult = { id: Date.now().toString(), name: playerName || 'Guest', score, timestamp: Date.now() };
     setCurrentPlayerResult(newResult);
     setLeaderboard(prev => [...prev, newResult].sort((a, b) => b.score !== a.score ? b.score - a.score : b.timestamp - a.timestamp));
-    setTimeout(() => setCurrentView('leaderboard'), 2000);
+    
+    // Phase 1 -> Phase 2: "Times Up" completely disappears
+    const t1 = setTimeout(() => setScorePhase('fadeTimesUp'), 2000); 
+    
+    // Phase 2 -> Phase 3: Wait 500ms for screen to clear, then fade in Score Card
+    const t2 = setTimeout(() => setScorePhase('score'), 2500); 
+    
+    // Proceed to Leaderboard after enough time to enjoy the reaction
+    const t3 = setTimeout(() => setCurrentView('leaderboard'), 7500); 
+
+    sequenceTimeouts.current = [t1, t2, t3];
   };
 
   const resetToCover = () => {
     setPlayerName('');
+    clearSequenceTimeouts();
+    setScorePhase('timesUp'); // Ensure it starts clean for the next player
     setCurrentView('cover');
   };
 
@@ -285,7 +328,7 @@ export default function App() {
                 </div>
 
                 <button 
-                  onClick={initializeGame}
+                  onClick={showRules}
                   disabled={!playerName.trim()}
                   className={`w-full text-xl 2xl:text-4xl font-black py-4 2xl:py-6 mt-6 2xl:mt-10 rounded-2xl flex items-center justify-center transition-all duration-300 uppercase tracking-widest ${
                     playerName.trim() 
@@ -317,6 +360,58 @@ export default function App() {
       );
     }
 
+    if (currentView === 'rules') {
+      return (
+        <div className="w-full min-h-screen flex items-center justify-center relative overflow-y-auto overflow-x-hidden bg-white">
+          <div className="absolute inset-0 z-0 bg-gradient-to-br from-white to-[#E0E0E0] fixed">
+            {!bgFailed && (
+              <img src="./bg.png" onError={() => setBgFailed(true)} className="w-full h-full object-cover mix-blend-multiply opacity-100" alt="Background" />
+            )}
+          </div>
+          
+          <div className="relative z-10 w-full max-w-2xl bg-[#0a0f1e]/80 backdrop-blur-2xl border-2 border-white/20 p-8 md:p-12 2xl:p-16 rounded-3xl md:rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.4),inset_0_0_20px_rgba(255,255,255,0.1)] flex flex-col items-center animate-in zoom-in duration-500 mx-4 my-8">
+             <h2 className="text-4xl md:text-5xl 2xl:text-6xl font-black text-white mb-8 2xl:mb-12 tracking-widest uppercase text-center drop-shadow-lg" style={{ fontFamily: "'Train One', sans-serif" }}>
+               How to Play
+             </h2>
+
+             <div className="flex flex-col gap-4 md:gap-6 2xl:gap-8 w-full mb-10 2xl:mb-14">
+               <div className="flex items-start gap-4 md:gap-6 bg-white/10 p-5 md:p-6 rounded-2xl border border-white/20 shadow-inner">
+                 <span className="text-3xl md:text-4xl shrink-0">👀</span>
+                 <div>
+                   <h4 className="text-xl md:text-2xl font-bold text-cyan-300 mb-1 uppercase tracking-wider">3s Quick Peek</h4>
+                   <p className="text-base md:text-lg 2xl:text-xl text-white/90">Get a 3-second flash of all the cards.</p>
+                 </div>
+               </div>
+               
+               <div className="flex items-start gap-4 md:gap-6 bg-white/10 p-5 md:p-6 rounded-2xl border border-white/20 shadow-inner">
+                 <span className="text-3xl md:text-4xl shrink-0">⏱️</span>
+                 <div>
+                   <h4 className="text-xl md:text-2xl font-bold text-red-400 mb-1 uppercase tracking-wider">30s Memory Race</h4>
+                   <p className="text-base md:text-lg 2xl:text-xl text-white/90">The 30-second timer drops!</p>
+                 </div>
+               </div>
+
+               <div className="flex items-start gap-4 md:gap-6 bg-white/10 p-5 md:p-6 rounded-2xl border border-white/20 shadow-inner">
+                 <span className="text-3xl md:text-4xl shrink-0">🃏</span>
+                 <div>
+                   <h4 className="text-xl md:text-2xl font-bold text-yellow-400 mb-1 uppercase tracking-wider">Match</h4>
+                   <p className="text-base md:text-lg 2xl:text-xl text-white/90">Find all 10 pairs before time runs out!</p>
+                 </div>
+               </div>
+             </div>
+
+             <button 
+               onClick={initializeGame}
+               className="w-full max-w-md text-2xl md:text-3xl 2xl:text-4xl font-black py-4 2xl:py-6 rounded-2xl flex items-center justify-center transition-all duration-300 uppercase tracking-widest bg-[#22d3ee] border-none shadow-[0_10px_30px_rgba(34,211,238,0.5)] text-white hover:scale-105 hover:bg-[#22d3ee] hover:shadow-[0_0_45px_rgba(34,211,238,0.9)]"
+             >
+               <Play className="mr-3 md:mr-4 w-8 h-8 md:w-10 md:h-10" fill="currentColor" />
+               Go!
+             </button>
+          </div>
+        </div>
+      );
+    }
+
     if (currentView === 'playing') {
       return (
         <div className="w-full min-h-screen text-white flex flex-col p-4 md:p-8 2xl:p-12 font-sans relative overflow-x-hidden overflow-y-auto bg-[#0a0f1e]">
@@ -335,8 +430,10 @@ export default function App() {
             </div>
             
             <div className="flex flex-col items-center w-full md:w-1/3 justify-center order-first md:order-none mb-2 md:mb-0">
-              <span className="text-slate-300 md:text-slate-500 text-xs 2xl:text-lg font-bold uppercase tracking-widest mb-1 text-center">Time Remaining</span>
-              <div className={`text-4xl md:text-5xl 2xl:text-7xl font-black flex items-center ${timeLeft <= 10 ? 'text-red-400 md:text-red-500 animate-pulse drop-shadow-md' : 'text-white md:text-slate-800'}`}>
+              <span className="text-slate-300 md:text-slate-500 text-xs 2xl:text-lg font-bold uppercase tracking-widest mb-1 text-center">
+                {isPreviewing ? 'Memorize Cards!' : 'Time Remaining'}
+              </span>
+              <div className={`text-4xl md:text-5xl 2xl:text-7xl font-black flex items-center ${timeLeft <= 10 && !isPreviewing ? 'text-red-400 md:text-red-500 animate-pulse drop-shadow-md' : 'text-white md:text-slate-800'}`}>
                 <Timer className="mr-2 2xl:mr-4 w-6 h-6 md:w-8 md:h-8 2xl:w-12 2xl:h-12" />
                 {String(Math.floor(timeLeft / 60)).padStart(2, '0')}:{String(timeLeft % 60).padStart(2, '0')}
               </div>
@@ -352,7 +449,7 @@ export default function App() {
 
           <div className="flex-1 w-full max-w-[1600px] mx-auto grid grid-cols-4 md:grid-cols-5 gap-3 sm:gap-4 xl:gap-6 pb-6 relative z-10 min-h-[50vh]">
             {cards.map((card, index) => {
-              const isFlipped = flippedIndices.includes(index) || matchedIndices.includes(index);
+              const isFlipped = isPreviewing || flippedIndices.includes(index) || matchedIndices.includes(index);
               const isMatched = matchedIndices.includes(index);
               return (
                 <div key={card.id} onClick={() => handleCardClick(index)} className="relative cursor-pointer perspective-1000 group aspect-[3/4] md:aspect-auto">
@@ -383,18 +480,50 @@ export default function App() {
     }
 
     if (currentView === 'score_reveal') {
+      const getScoreImage = (s) => {
+        if (s <= 29) return './score-bg/0-29.avif';
+        if (s <= 49) return './score-bg/30-49.jpg';
+        if (s <= 69) return './score-bg/50-69.gif';
+        if (s <= 89) return './score-bg/70-89.gif';
+        return './score-bg/90-100.jpg';
+      };
+      
+      const reactionImage = getScoreImage(score);
+
       return (
-        <div className="w-full h-full min-h-screen text-white flex flex-col items-center justify-center p-4 2xl:p-8 animate-in fade-in duration-700 relative overflow-hidden">
+        <div className="w-full h-full min-h-screen text-white flex flex-col items-center justify-center p-4 2xl:p-8 relative overflow-hidden">
           <div className="absolute inset-0 z-0 fixed">
             <img src="./bg-3.png" className="w-full h-full object-cover blur-[2px]" alt="Score Background" />
           </div>
-          <div className="relative z-10 flex flex-col items-center -translate-y-4 2xl:-translate-y-8">
-            <h2 className="text-5xl md:text-7xl xl:text-8xl 2xl:text-9xl font-black text-white mb-12 2xl:mb-24 tracking-widest uppercase italic drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)] text-center">Times Up!</h2>
-            <div className="bg-[#e0e0e0] p-10 md:p-16 2xl:p-24 rounded-3xl 2xl:rounded-[4rem] shadow-[10px_10px_30px_#bebebe,-10px_-10px_30px_#ffffff,inset_0_0_15px_rgba(0,0,0,0.02),0_4px_10px_rgba(0,0,0,0.1)] border border-white/20 flex flex-col items-center transform scale-100 2xl:scale-125">
-              <p className="text-2xl 2xl:text-4xl text-slate-600 mb-4 2xl:mb-6 font-bold uppercase tracking-widest text-center 2xl:-mt-8">Your Score</p>
-              <p className="text-[6rem] md:text-[8rem] 2xl:text-[12rem] font-black text-black leading-none text-center">{score}</p>
+          
+          {/* Phase 1: Times Up! - Conditionally rendered so it completely disappears in Phase 2 */}
+          {scorePhase !== 'score' && (
+            <div className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ease-in-out z-20 ${scorePhase === 'timesUp' ? 'opacity-100 scale-100' : 'opacity-0 scale-125 pointer-events-none'}`}>
+              <h2 className="text-7xl md:text-8xl lg:text-9xl 2xl:text-[10rem] font-black text-white tracking-widest uppercase italic drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)] text-center">
+                Times Up!
+              </h2>
             </div>
-          </div>
+          )}
+
+          {/* Phase 2: HUGE Score & Reaction Image - Conditionally rendered so it completely does NOT exist in Phase 1 */}
+          {scorePhase !== 'timesUp' && (
+            <div className={`absolute inset-0 flex items-center justify-center transition-all duration-700 ease-in-out z-10 ${scorePhase === 'score' ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}>
+              <div className="bg-[#e0e0e0] p-6 md:p-8 lg:p-12 rounded-3xl 2xl:rounded-[4rem] shadow-[10px_10px_40px_rgba(0,0,0,0.4),inset_0_0_15px_rgba(255,255,255,0.5)] border border-white/50 flex flex-col md:flex-row items-center gap-6 lg:gap-12 w-11/12 max-w-[1300px]">
+                
+                {/* Reaction Image - Made as big as possible */}
+                <div className="flex-1 w-full h-[40vh] md:h-[50vh] 2xl:h-[60vh] rounded-2xl 2xl:rounded-3xl overflow-hidden shadow-[inset_0_4px_15px_rgba(0,0,0,0.3)] border-[6px] lg:border-8 border-white shrink-0 bg-black/10">
+                  <img src={reactionImage} alt="Score Reaction" className="w-full h-full object-cover" />
+                </div>
+
+                {/* Score Block */}
+                <div className="flex flex-col items-center justify-center px-4 md:px-10 shrink-0">
+                  <p className="text-2xl md:text-3xl lg:text-4xl text-slate-600 mb-2 lg:mb-4 font-bold uppercase tracking-widest text-center">Your Score</p>
+                  <p className="text-[7rem] md:text-[9rem] lg:text-[11rem] 2xl:text-[14rem] font-black text-black leading-none text-center drop-shadow-md">{score}</p>
+                </div>
+
+              </div>
+            </div>
+          )}
         </div>
       );
     }
