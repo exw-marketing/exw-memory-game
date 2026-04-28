@@ -3,6 +3,30 @@ import {
   Trophy, Crown, Play, Timer, User, Maximize, Minimize
 } from 'lucide-react';
 
+// --- Cloud Database (Firebase) Setup ---
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
+
+let app, auth, db;
+let appId = 'default-app-id';
+
+// Replace the entire try/catch block with your actual Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyAxDqxVtZJxUx8TlCCXhQgNqfTbs8XePBc",
+  authDomain: "exw-memory-game.firebaseapp.com",
+  projectId: "exw-memory-game",
+  storageBucket: "exw-memory-game.firebasestorage.app",
+  messagingSenderId: "192558533697",
+  appId: "1:192558533697:web:890c8f28c170146f550ac0",
+  measurementId: "G-3R581H4H63"
+};
+
+app = initializeApp(firebaseConfig);
+auth = getAuth(app);
+db = getFirestore(app);
+appId = 'exw-memory-game-live'; // Give your app a unique ID
+
 // --- Configuration & Mock Data ---
 const GAME_TIME = 30; 
 const POINTS_PER_MATCH = 10;
@@ -20,18 +44,11 @@ const PRODUCT_IMAGES = [
   './card-image/c6 patch panel.png'
 ];
 
-const initialLeaderboard = [
-  { id: 'empty-1', name: '---', score: 0, timestamp: 5 },
-  { id: 'empty-2', name: '---', score: 0, timestamp: 4 },
-  { id: 'empty-3', name: '---', score: 0, timestamp: 3 },
-  { id: 'empty-4', name: '---', score: 0, timestamp: 2 },
-  { id: 'empty-5', name: '---', score: 0, timestamp: 1 },
-];
-
 export default function App() {
   const [currentView, setCurrentView] = useState('cover');
   const [playerName, setPlayerName] = useState('');
-  const [leaderboard, setLeaderboard] = useState(initialLeaderboard);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [user, setUser] = useState(null);
   
   const [bgFailed, setBgFailed] = useState(false);
 
@@ -45,10 +62,49 @@ export default function App() {
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [scorePhase, setScorePhase] = useState('timesUp');
   const [currentPlayerResult, setCurrentPlayerResult] = useState(null);
+  const [gameStartTime, setGameStartTime] = useState(null);
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const sequenceTimeouts = useRef([]);
 
+  // --- Cloud Database Authentication & Syncing ---
+  useEffect(() => {
+    if (!auth) return;
+    const initAuth = async () => {
+      try {
+        await signInAnonymously(auth);
+      } catch (error) {
+        console.error("Firebase Auth Error: Did you enable Anonymous Sign-in in the console?", error);
+      }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
+  }, []);
+
+  // FETCH LEADERBOARD (Modified to ALWAYS fetch, even if user auth is delayed)
+  useEffect(() => {
+    if (!db) return; 
+    
+    const q = collection(db, 'leaderboard');
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => doc.data());
+      
+      // Sort Rule: Highest Score First. If tied, Most Recent Start Time First!
+      data.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return b.startTime - a.startTime; 
+      });
+      
+      setLeaderboard(data);
+    }, (error) => {
+      console.error("Error fetching leaderboard. Check your Firestore Rules:", error);
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
+  // --- Window Resizing & Fullscreen ---
   useEffect(() => {
     const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -72,6 +128,7 @@ export default function App() {
     }
   };
 
+  // --- Input & Navigation ---
   const handleNameChange = (e) => {
     const input = e.target;
     const start = input.selectionStart;
@@ -95,17 +152,27 @@ export default function App() {
     if (e.key === 'Enter' && playerName.trim()) {
       if (currentView === 'cover') {
         showRules();
-      } else if (currentView === 'rules') {
-        initializeGame();
       }
     }
   };
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if (e.key === 'Enter' && currentView === 'rules') {
+        initializeGame();
+      }
+    };
+    
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [currentView]);
 
   const clearSequenceTimeouts = () => {
     sequenceTimeouts.current.forEach(clearTimeout);
     sequenceTimeouts.current = [];
   };
 
+  // --- Core Game Logic ---
   const initializeGame = () => {
     clearSequenceTimeouts();
     const deck = [...PRODUCT_IMAGES, ...PRODUCT_IMAGES]
@@ -117,7 +184,8 @@ export default function App() {
     setScore(0);
     setTimeLeft(GAME_TIME);
     setIsPreviewing(true);
-    setScorePhase('timesUp'); // Reset score phase to prevent flash bugs
+    setScorePhase('timesUp'); 
+    setGameStartTime(Date.now()); 
     setCurrentView('playing');
   };
 
@@ -153,29 +221,51 @@ export default function App() {
         setFlippedIndices([]);
         setIsProcessing(false);
       } else {
+        // Reduced timeout to 300ms to allow faster gameplay
         setTimeout(() => {
           setFlippedIndices([]);
           setIsProcessing(false);
-        }, 500);
+        }, 300);
       }
     }
   };
 
-  const endGame = () => {
+  const endGame = async () => {
     clearSequenceTimeouts();
     setScorePhase('timesUp');
     setCurrentView('score_reveal');
-    const newResult = { id: Date.now().toString(), name: playerName || 'Guest', score, timestamp: Date.now() };
+    
+    // Package the results to save
+    const newResult = { 
+      id: (user?.uid || 'guest-' + Math.random().toString(36).substr(2, 9)) + '-' + Date.now(), 
+      userId: user?.uid || 'guest',
+      name: playerName || 'Guest', 
+      score: score, 
+      startTime: gameStartTime || Date.now() 
+    };
+    
     setCurrentPlayerResult(newResult);
-    setLeaderboard(prev => [...prev, newResult].sort((a, b) => b.score !== a.score ? b.score - a.score : b.timestamp - a.timestamp));
+
+    // Save to Cloud Database (Modified to ALWAYS attempt to save if DB exists)
+    if (db) {
+      try {
+        const docRef = doc(db, 'leaderboard', newResult.id);
+        await setDoc(docRef, newResult);
+        console.log("Successfully saved score to Firebase!");
+      } catch (err) {
+        console.error("Firebase Save Error! Are Anonymous Sign-in AND Firestore Rules set correctly? Error:", err);
+        // Fallback so the user at least sees their score locally for this session
+        setLeaderboard(prev => {
+          const updated = [...prev, newResult];
+          updated.sort((a, b) => b.score !== a.score ? b.score - a.score : b.startTime - a.startTime);
+          return updated;
+        });
+      }
+    }
     
-    // Phase 1 -> Phase 2: "Times Up" completely disappears
+    // UI Transitions
     const t1 = setTimeout(() => setScorePhase('fadeTimesUp'), 2000); 
-    
-    // Phase 2 -> Phase 3: Wait 500ms for screen to clear, then fade in Score Card
     const t2 = setTimeout(() => setScorePhase('score'), 2500); 
-    
-    // Proceed to Leaderboard after enough time to enjoy the reaction
     const t3 = setTimeout(() => setCurrentView('leaderboard'), 7500); 
 
     sequenceTimeouts.current = [t1, t2, t3];
@@ -184,33 +274,50 @@ export default function App() {
   const resetToCover = () => {
     setPlayerName('');
     clearSequenceTimeouts();
-    setScorePhase('timesUp'); // Ensure it starts clean for the next player
+    setScorePhase('timesUp'); 
     setCurrentView('cover');
+  };
+
+  // Ensure we always have 5 rows to display, padding with empty slots if needed
+  const getPaddedTop5 = () => {
+    const top5 = [];
+    for (let i = 0; i < 5; i++) {
+      if (leaderboard[i]) {
+        top5.push(leaderboard[i]);
+      } else {
+        top5.push({ id: `empty-${i}`, name: '---', score: 0 });
+      }
+    }
+    return top5;
   };
 
   const renderPlayerRow = (player, index, isCurrentPlayer, isRankedTop5, isCoverView = false) => {
     let rowBgClass = '';
-    
-    const isHighContrastRow = isCurrentPlayer && isRankedTop5 && index >= 3 && !isCoverView;
+    const isEmptyPlaceholder = player.name === '---';
     
     if (isCoverView) {
       rowBgClass = index < 3
-        ? 'bg-[#F59E0B]/85 backdrop-blur-xl border border-amber-300/80 shadow-[0_8px_25px_rgba(245,158,11,0.4)] rounded-[1.5rem]'
-        : 'bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.1)] rounded-[1.5rem]';
+        ? 'bg-[#F59E0B] shadow-[0_8px_25px_rgba(245,158,11,0.3)] rounded-[1.25rem]'
+        : 'bg-white/30 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.1)] rounded-[1.25rem]';
     } else {
       if (isCurrentPlayer) {
         if (index < 3) {
+          // TARGET VISUAL MATCH from image_4f742f.jpg
           rowBgClass = 'bg-yellow-500/50 backdrop-blur-xl border-2 border-yellow-300 shadow-[0_0_35px_rgba(250,204,21,0.9),inset_0_0_20px_rgba(255,255,255,0.5)] transform scale-110 z-30 rounded-3xl';
         } else if (isRankedTop5) {
-          rowBgClass = 'bg-white/20 backdrop-blur-xl border-2 border-white shadow-[0_0_30px_rgba(255,255,255,0.8),inset_0_0_20px_rgba(255,255,255,0.5)] transform scale-[1.05] z-30 rounded-3xl';
+          // Standard highlight for 4th/5th place
+          rowBgClass = 'bg-white/10 backdrop-blur-xl border-2 border-white shadow-[0_0_25px_rgba(255,255,255,0.4)] transform scale-105 z-30 rounded-3xl';
         } else {
+          // TARGET VISUAL MATCH from image_4e7850.jpg (Current player NOT in top 5)
           rowBgClass = 'bg-emerald-500/50 backdrop-blur-xl border-2 border-emerald-300 shadow-[0_0_30px_rgba(52,211,153,0.8),inset_0_0_20px_rgba(255,255,255,0.3)] transform scale-[1.02] z-30 rounded-3xl';
         }
       } else {
         if (index < 3) {
-          rowBgClass = 'bg-[#F59E0B]/90 backdrop-blur-xl border border-[#F59E0B] shadow-[inset_0_0_20px_rgba(255,255,255,0.2),0_10px_30px_rgba(245,158,11,0.3)] transform scale-105 z-10 rounded-3xl';
+          // Standard solid orange for Top 3 Masters
+          rowBgClass = 'bg-[#F59E0B] shadow-[0_8px_25px_rgba(245,158,11,0.3)] rounded-3xl';
         } else {
-          rowBgClass = 'bg-black/20 backdrop-blur-md border border-white/30 shadow-[0_8px_32px_rgba(0,0,0,0.1)] rounded-3xl';
+          // Standard glassy white for 4th/5th place
+          rowBgClass = 'bg-white/10 backdrop-blur-xl border border-white/20 shadow-[0_8px_32px_rgba(0,0,0,0.1)] rounded-3xl';
         }
       }
     }
@@ -218,15 +325,13 @@ export default function App() {
     return (
       <div 
         key={player.id} 
-        className={`relative px-4 xl:px-6 2xl:px-8 py-3 2xl:py-5 flex items-center justify-between transition-all duration-500 ${rowBgClass}`}
+        className={`relative px-4 xl:px-6 2xl:px-8 py-3 2xl:py-5 flex items-center justify-between transition-all duration-500 ${rowBgClass} ${isEmptyPlaceholder ? 'opacity-50' : 'opacity-100'}`}
       >
         <div className="flex items-center gap-3 xl:gap-4 2xl:gap-6">
           <div className={`w-10 h-10 xl:w-12 xl:h-12 2xl:w-16 2xl:h-16 rounded-xl 2xl:rounded-2xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)] flex items-center justify-center shrink-0 ${
             isCoverView 
               ? 'bg-black/10 border border-white/20' 
-              : isHighContrastRow 
-                ? 'bg-slate-800/20 border border-white/40' 
-                : 'bg-black/10 border border-white/10' 
+              : 'bg-black/20 border border-white/10'
           }`}>
             {index < 3 ? (
               <Crown className={`w-5 h-5 xl:w-6 xl:h-6 2xl:w-8 2xl:h-8 ${
@@ -235,18 +340,21 @@ export default function App() {
                 'text-[#8B4513] drop-shadow-[0_0_12px_rgba(139,69,19,0.9)]'
               }`} fill="currentColor" />
             ) : (
-              <span className={`text-lg xl:text-xl 2xl:text-2xl font-black ${isHighContrastRow ? 'text-white drop-shadow-md' : 'text-white/50'}`}>{index + 1}</span>
+              <span className={`text-lg xl:text-xl 2xl:text-2xl font-black ${index >= 3 ? 'text-white' : 'text-white/70'}`}>{index + 1}</span>
             )}
           </div>
-          <span className={`text-xl xl:text-2xl 2xl:text-4xl font-bold tracking-wide truncate ${isHighContrastRow ? 'text-slate-800 drop-shadow-sm' : 'text-white drop-shadow-md'}`}>
+          <span 
+            className="text-xl xl:text-2xl 2xl:text-4xl font-bold tracking-wide truncate text-white drop-shadow-md"
+            style={index >= 3 ? { WebkitTextStroke: '0.8px rgba(229, 231, 235, 0.4)' } : {}}
+          >
             {player.name}
           </span>
         </div>
         <div className="flex flex-col items-end pl-2">
-           <span className={`text-2xl xl:text-3xl 2xl:text-5xl font-black ${isHighContrastRow ? 'text-slate-800 drop-shadow-sm' : 'text-white drop-shadow-lg'}`}>
+           <span className="text-2xl xl:text-3xl 2xl:text-5xl font-black text-white drop-shadow-lg">
              {player.score}
            </span>
-           <span className={`text-[10px] 2xl:text-xs font-bold uppercase tracking-widest ${index < 3 ? 'text-white/80' : (isHighContrastRow ? 'text-slate-600' : 'text-white/50')}`}>
+           <span className={`text-[10px] 2xl:text-xs font-black uppercase tracking-widest text-white drop-shadow-lg ${index < 3 ? 'opacity-90' : 'opacity-100'}`}>
              Points
            </span>
         </div>
@@ -256,6 +364,8 @@ export default function App() {
 
   const renderCurrentView = () => {
     if (currentView === 'cover') {
+      const top5Display = getPaddedTop5();
+      
       return (
         <div className="w-full min-h-screen flex items-center justify-center relative overflow-y-auto overflow-x-hidden bg-white">
           <div className="absolute inset-0 z-0 bg-gradient-to-br from-white to-[#E0E0E0] fixed">
@@ -268,7 +378,6 @@ export default function App() {
             {/* Left Content / Titles */}
             <div className="flex-1 w-full flex flex-col items-center justify-center mt-8 lg:mt-0 min-w-0">
               <div className="mb-8 2xl:mb-16 flex flex-col items-center w-full min-w-0">
-                {/* Note the font sizes dip at lg: so they fit side-by-side without overflowing, then grow at xl/2xl */}
                 <h1 
                   className="text-5xl md:text-7xl lg:text-5xl xl:text-6xl 2xl:text-[7.5rem] uppercase text-center leading-[1.1] drop-shadow-2xl mb-2 2xl:mb-4 whitespace-normal lg:whitespace-nowrap w-full" 
                   style={{ 
@@ -352,7 +461,7 @@ export default function App() {
               </h3>
               
               <div className="flex flex-col gap-3 2xl:gap-6 w-full relative z-10">
-                {leaderboard.slice(0, 5).map((player, idx) => renderPlayerRow(player, idx, false, true, true))}
+                {top5Display.map((player, idx) => renderPlayerRow(player, idx, false, true, true))}
               </div>
             </div>
           </div>
@@ -454,7 +563,7 @@ export default function App() {
               return (
                 <div key={card.id} onClick={() => handleCardClick(index)} className="relative cursor-pointer perspective-1000 group aspect-[3/4] md:aspect-auto">
                   <div 
-                    className={`w-full h-full duration-500 transition-all relative rounded-xl 2xl:rounded-3xl shadow-xl border-2 ${
+                    className={`w-full h-full duration-300 transition-all relative rounded-xl 2xl:rounded-3xl shadow-xl border-2 ${
                       isMatched 
                         ? 'border-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] md:shadow-[0_0_40px_rgba(250,204,21,0.8)] bg-yellow-900/20' 
                         : isFlipped 
@@ -466,7 +575,6 @@ export default function App() {
                     <div className="absolute inset-0 w-full h-full rounded-[0.8rem] 2xl:rounded-[1.4rem] overflow-hidden bg-white" style={{ backfaceVisibility: 'hidden' }}>
                       <img src="./card-image/exw card.png" alt="Card Back" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     </div>
-                    {/* Fixed: Added overflow-hidden to the front face and removed scale effect to guarantee images never break outside boundaries */}
                     <div className="absolute inset-0 w-full h-full bg-white rounded-[0.8rem] 2xl:rounded-[1.4rem] flex items-center justify-center shadow-2xl p-2 md:p-3 2xl:p-4 overflow-hidden" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
                       <img src={card.imagePath} alt="Product Card" className="w-full h-full object-contain transition-all duration-300" />
                     </div>
@@ -496,7 +604,6 @@ export default function App() {
             <img src="./bg-3.png" className="w-full h-full object-cover blur-[2px]" alt="Score Background" />
           </div>
           
-          {/* Phase 1: Times Up! - Conditionally rendered so it completely disappears in Phase 2 */}
           {scorePhase !== 'score' && (
             <div className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ease-in-out z-20 ${scorePhase === 'timesUp' ? 'opacity-100 scale-100' : 'opacity-0 scale-125 pointer-events-none'}`}>
               <h2 className="text-7xl md:text-8xl lg:text-9xl 2xl:text-[10rem] font-black text-white tracking-widest uppercase italic drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)] text-center">
@@ -505,17 +612,14 @@ export default function App() {
             </div>
           )}
 
-          {/* Phase 2: HUGE Score & Reaction Image - Conditionally rendered so it completely does NOT exist in Phase 1 */}
           {scorePhase !== 'timesUp' && (
             <div className={`absolute inset-0 flex items-center justify-center transition-all duration-700 ease-in-out z-10 ${scorePhase === 'score' ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}>
               <div className="bg-[#e0e0e0] p-6 md:p-8 lg:p-12 rounded-3xl 2xl:rounded-[4rem] shadow-[10px_10px_40px_rgba(0,0,0,0.4),inset_0_0_15px_rgba(255,255,255,0.5)] border border-white/50 flex flex-col md:flex-row items-center gap-6 lg:gap-12 w-11/12 max-w-[1300px]">
                 
-                {/* Reaction Image - Made as big as possible */}
                 <div className="flex-1 w-full h-[40vh] md:h-[50vh] 2xl:h-[60vh] rounded-2xl 2xl:rounded-3xl overflow-hidden shadow-[inset_0_4px_15px_rgba(0,0,0,0.3)] border-[6px] lg:border-8 border-white shrink-0 bg-black/10">
                   <img src={reactionImage} alt="Score Reaction" className="w-full h-full object-cover" />
                 </div>
 
-                {/* Score Block */}
                 <div className="flex flex-col items-center justify-center px-4 md:px-10 shrink-0">
                   <p className="text-2xl md:text-3xl lg:text-4xl text-slate-600 mb-2 lg:mb-4 font-bold uppercase tracking-widest text-center">Your Score</p>
                   <p className="text-[7rem] md:text-[9rem] lg:text-[11rem] 2xl:text-[14rem] font-black text-black leading-none text-center drop-shadow-md">{score}</p>
@@ -529,26 +633,26 @@ export default function App() {
     }
 
     if (currentView === 'leaderboard') {
-      const top5 = leaderboard.slice(0, 5);
+      const top5Display = getPaddedTop5();
       const playerRankIndex = currentPlayerResult ? leaderboard.findIndex(p => p.id === currentPlayerResult.id) : -1;
       const isInTop5 = playerRankIndex >= 0 && playerRankIndex < 5;
 
       return (
-        <div className="w-full min-h-screen flex flex-col items-center justify-center py-12 px-4 md:px-8 2xl:px-16 font-sans relative overflow-x-hidden overflow-y-auto">
+        <div className="w-full min-h-screen flex flex-col items-center justify-center p-4 md:p-8 font-sans relative overflow-x-hidden overflow-y-auto">
           <div className="absolute inset-0 z-0 bg-white fixed">
              <img src="./bg-4.png" className="w-full h-full object-cover" alt="Leaderboard Background" />
           </div>
 
-          <div className="w-[90%] max-w-[1000px] flex flex-col justify-center bg-white/20 backdrop-blur-2xl 2xl:backdrop-blur-[60px] border border-white/30 2xl:border-2 2xl:border-white/50 rounded-3xl 2xl:rounded-[4rem] p-6 md:p-10 2xl:p-16 shadow-[0_10px_30px_rgba(0,0,0,0.2),inset_0_0_20px_rgba(255,255,255,0.4)] relative z-10 mt-8 mb-24">
+          <div className={`w-[90%] max-w-[1000px] flex flex-col justify-center bg-white/20 backdrop-blur-2xl 2xl:backdrop-blur-[60px] border border-white/30 2xl:border-2 2xl:border-white/50 rounded-3xl 2xl:rounded-[4rem] shadow-[0_10px_30px_rgba(0,0,0,0.2),inset_0_0_20px_rgba(255,255,255,0.4)] relative z-10 transition-all duration-500 ${!isInTop5 ? 'p-4 md:p-6 2xl:p-10 my-4' : 'p-6 md:p-10 2xl:p-16 mt-8 mb-24'}`}>
             <h3 
-              className="text-3xl md:text-4xl xl:text-5xl 2xl:text-6xl font-bold text-white mb-8 2xl:mb-12 flex items-center justify-center uppercase tracking-[0.05em] 2xl:tracking-[0.1em] relative z-10 drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)] text-center"
+              className={`text-3xl md:text-4xl xl:text-5xl 2xl:text-6xl font-bold text-white flex items-center justify-center uppercase tracking-[0.05em] 2xl:tracking-[0.1em] relative z-10 drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)] text-center transition-all ${!isInTop5 ? 'mb-4 2xl:mb-8' : 'mb-8 2xl:mb-12'}`}
               style={{ fontFamily: "'Train One', sans-serif" }}
             >
               Top 5 Masters
             </h3>
             
             <div className="flex flex-col gap-3 2xl:gap-5 w-full relative z-10">
-              {top5.map((player, idx) => {
+              {top5Display.map((player, idx) => {
                 const isMe = currentPlayerResult && player.id === currentPlayerResult.id;
                 return renderPlayerRow(player, idx, isMe, true, false);
               })}
