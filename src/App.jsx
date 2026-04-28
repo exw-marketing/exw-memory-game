@@ -481,11 +481,11 @@ export default function App() {
 
     if (currentView === 'score_reveal') {
       const getScoreImage = (s) => {
-        if (s <= 29) return './score-bg/0-29.avif';
-        if (s <= 49) return './score-bg/30-49.jpg';
+        if (s <= 29) return './score-bg/0-29.gif';
+        if (s <= 49) return './score-bg/30-49.gif';
         if (s <= 69) return './score-bg/50-69.gif';
         if (s <= 89) return './score-bg/70-89.gif';
-        return './score-bg/90-100.jpg';
+        return './score-bg/90-100.gif';
       };
       
       const reactionImage = getScoreImage(score);
