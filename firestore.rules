@@ -1,18 +1,52 @@
-rules_version='2'
+rules_version = '2';
 
+// EXW Memory Game - Computex 2026
+// Threat model: firebaseConfig is public; anyone can anon-auth and write.
+// Defense: strict schema on create, immutable after, no other collections.
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    match /leaderboard/{docId} {
+      // Public read so the booth display and visitor phones can show ranks
+      allow read: if true;
+
+      // Anonymous sign-in required; one-shot create only
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(
+             ['id', 'userId', 'name', 'score', 'startTime']
+           )
+        && request.resource.data.keys().hasAll(
+             ['id', 'userId', 'name', 'score', 'startTime']
+           )
+        && request.resource.data.id is string
+        && request.resource.data.id.size() > 0
+        && request.resource.data.id.size() <= 100
+        && request.resource.data.userId is string
+        && request.resource.data.userId.size() > 0
+        && request.resource.data.userId.size() <= 128
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        // ASCII-only names: <=30 chars; otherwise (contains Chinese/etc): <=20
+        && (
+             (request.resource.data.name.matches('^[\\x00-\\x7f]+$')
+                && request.resource.data.name.size() <= 30)
+             ||
+             (!request.resource.data.name.matches('^[\\x00-\\x7f]+$')
+                && request.resource.data.name.size() <= 20)
+           )
+        && request.resource.data.score is int
+        && request.resource.data.score >= 0
+        && request.resource.data.score <= 100  // 10 pairs * 10 pts
+        && request.resource.data.startTime is int
+        && request.resource.data.startTime > 0;
+
+      // Scores are permanent once written
+      allow update, delete: if false;
+    }
+
+    // Deny everything else
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 5, 28);
+      allow read, write: if false;
     }
   }
 }
